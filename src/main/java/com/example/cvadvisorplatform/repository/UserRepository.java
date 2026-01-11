@@ -1,0 +1,12 @@
+package com.example.cvadvisorplatform.repository;
+
+import com.example.cvadvisorplatform.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional; // <-- Nhớ import cái này
+
+public interface UserRepository extends JpaRepository<User, Long> {
+
+
+    Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
+}
