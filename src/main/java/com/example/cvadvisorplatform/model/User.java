@@ -22,10 +22,13 @@ public class User {
 
     @Column(nullable = false)
     private String password;
-
+    @Column
+    private String avatar;
     @ManyToOne
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
+    @Column(nullable = false)
+    private boolean enabled = true;
 
     @Column(updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

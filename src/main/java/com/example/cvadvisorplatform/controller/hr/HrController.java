@@ -1,4 +1,4 @@
-package com.example.cvadvisorplatform.controller;
+package com.example.cvadvisorplatform.controller.hr;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

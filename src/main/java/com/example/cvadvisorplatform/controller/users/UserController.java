@@ -1,15 +1,14 @@
-package com.example.cvadvisorplatform.controller;
+package com.example.cvadvisorplatform.controller.users;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin")
-public class AdminController {
-    @GetMapping("/dashboard")
-    public String admin() {
-        return "ADMIN DASHBOARD";
+@RequestMapping("/api/public")
+public class UserController {
+    @GetMapping("/home")
+    public String home() {
+        return "USER HOME PUBLIC";
     }
 }
-
