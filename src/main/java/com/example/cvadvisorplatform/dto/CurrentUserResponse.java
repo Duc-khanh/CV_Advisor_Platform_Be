@@ -15,4 +15,7 @@ public class CurrentUserResponse {
     private String role;
     private Boolean enabled;
     private String avatarUrl;
+
+    public CurrentUserResponse(Long userId, String fullName, String email, String roleName, boolean enabled, String avatar) {
+    }
 }

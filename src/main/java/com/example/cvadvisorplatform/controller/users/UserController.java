@@ -1,14 +1,16 @@
 package com.example.cvadvisorplatform.controller.users;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.example.cvadvisorplatform.dto.JobPublicResponse;
+import com.example.cvadvisorplatform.service.HrJobService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/public")
+@RequiredArgsConstructor
 public class UserController {
-    @GetMapping("/home")
-    public String home() {
-        return "USER HOME PUBLIC";
-    }
+
+    private final HrJobService jobService;
 }

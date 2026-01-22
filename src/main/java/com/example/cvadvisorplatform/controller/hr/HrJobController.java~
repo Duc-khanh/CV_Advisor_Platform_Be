@@ -1,0 +1,28 @@
+package com.example.cvadvisorplatform.controller.hr;
+
+import com.example.cvadvisorplatform.dto.JobCreateRequest;
+import com.example.cvadvisorplatform.dto.JobResponse;
+import com.example.cvadvisorplatform.service.HrJobService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/hr/jobs")
+@RequiredArgsConstructor
+public class HrJobController {
+
+    private final HrJobService hrJobService;
+
+    @PostMapping
+    public JobResponse createJob(@RequestBody JobCreateRequest request) {
+        return hrJobService.createJob(request);
+    }
+
+    /* ===== HR XEM JOB CỦA CÔNG TY ===== */
+    @GetMapping
+    public List<JobResponse> getMyJobs() {
+        return hrJobService.getMyCompanyJobs();
+    }
+}

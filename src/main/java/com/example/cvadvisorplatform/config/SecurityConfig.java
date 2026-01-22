@@ -23,7 +23,6 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -33,30 +32,26 @@ public class SecurityConfig {
                         sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // PUBLIC
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/api/public/**"
-                        ).permitAll()
-                        // USER
-                        .requestMatchers("/api/user/**")
-                        .hasAnyRole("USER")
+                        // Cho phép truy cập công khai
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
 
-                        // HR
-                        .requestMatchers("/api/hr/**")
-                        .hasRole("HR")
+                        // Phân quyền dựa trên Role
+                        // Lưu ý: UserPrincipal.getAuthorities() phải trả về "ROLE_USER"
+                        .requestMatchers("/api/user/**").hasRole("USER")
+                        .requestMatchers("/api/hr/**").hasRole("HR")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // ADMIN
-                        .requestMatchers("/api/admin/**")
-                        .hasRole("ADMIN")
-
+                        // Mọi request khác đều cần đăng nhập
                         .anyRequest().authenticated()
                 )
-
+                // Đặt JwtFilter TRƯỚC UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

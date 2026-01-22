@@ -1,6 +1,5 @@
 package com.example.cvadvisorplatform.security;
 
-
 import com.example.cvadvisorplatform.model.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,10 +16,17 @@ public class UserPrincipal implements UserDetails {
         this.user = user;
     }
 
+    // ===== THÊM METHOD NÀY =====
+    public User getUser() {
+        return user;
+    }
+    // ==========================
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Chuyển Role enum thành quyền hạn cho Security (VD: ROLE_ADMIN)
-        return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName()));
+        return Collections.singleton(
+                new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName())
+        );
     }
 
     @Override
@@ -30,21 +36,26 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getEmail(); }
+        return user.getEmail();
+    }
 
     @Override
-    public boolean isAccountNonExpired() { return true; }
+    public boolean isAccountNonExpired() {
+        return true;
+    }
 
     @Override
-    public boolean isAccountNonLocked() { return true; }
+    public boolean isAccountNonLocked() {
+        return true;
+    }
 
     @Override
-    public boolean isCredentialsNonExpired() { return true; }
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
 
     @Override
     public boolean isEnabled() {
-        return false;
+        return user.isEnabled();
     }
-
-
 }

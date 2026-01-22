@@ -22,10 +22,11 @@ public class Job {
     @Lob
     private String description;
 
+    /* ===== THÊM TRƯỜNG NÀY ===== */
     @Lob
-    @Column(name = "candidate_requirements", columnDefinition = "LONGTEXT")
+    @Column(name = "candidate_requirements")
     private String candidateRequirements;
-
+    /* =========================== */
 
     private String location;
     private String salaryRange;

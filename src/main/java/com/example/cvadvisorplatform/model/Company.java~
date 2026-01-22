@@ -19,7 +19,6 @@ public class Company {
     @ManyToOne
     @JoinColumn(name = "industry_id", nullable = false)
     private Industry industry;
-    private String address;
 
     @Lob
     private String description;
