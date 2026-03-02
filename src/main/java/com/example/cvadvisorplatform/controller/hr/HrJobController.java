@@ -4,7 +4,9 @@ import com.example.cvadvisorplatform.dto.JobCreateRequest;
 import com.example.cvadvisorplatform.dto.JobResponse;
 import com.example.cvadvisorplatform.service.HrJobService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -15,28 +17,30 @@ public class HrJobController {
 
     private final HrJobService hrJobService;
 
-    /* ===== THÊM ===== */
-    @PostMapping
-    public JobResponse createJob(@RequestBody JobCreateRequest request) {
-        return hrJobService.createJob(request);
+     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public JobResponse createJob(
+            @ModelAttribute JobCreateRequest request,
+            @RequestParam(value = "image", required = false) MultipartFile image
+    ) {
+        return hrJobService.createJob(request, image);
     }
 
-    /* ===== SỬA ===== */
-    @PutMapping("/{id}")
+
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public JobResponse updateJob(
             @PathVariable Long id,
-            @RequestBody JobCreateRequest request
+            @ModelAttribute JobCreateRequest request,
+            @RequestParam(value = "image", required = false) MultipartFile image
     ) {
-        return hrJobService.updateJob(id, request);
+        return hrJobService.updateJob(id, request, image);
     }
 
-    /* ===== XÓA ===== */
-    @DeleteMapping("/{id}")
+     @DeleteMapping("/{id}")
     public void deleteJob(@PathVariable Long id) {
         hrJobService.deleteJob(id);
     }
 
-    /* ===== XEM / TÌM / LỌC ===== */
+
     @GetMapping
     public List<JobResponse> getMyJobs(
             @RequestParam(required = false) String keyword,

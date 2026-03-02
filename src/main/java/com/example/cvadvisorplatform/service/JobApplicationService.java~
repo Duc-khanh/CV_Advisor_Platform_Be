@@ -1,6 +1,5 @@
 package com.example.cvadvisorplatform.service;
 
-import com.example.cvadvisorplatform.dto.AppliedCandidateResponse;
 import com.example.cvadvisorplatform.dto.AppliedJobResponse;
 import com.example.cvadvisorplatform.dto.JobPublicResponse;
 import com.example.cvadvisorplatform.model.Job;
@@ -108,38 +107,6 @@ public class JobApplicationService {
                 res.setJob(jobRes);
             }
             return res;
-        }).toList();
-    }
-
-
-    public List<AppliedCandidateResponse> getAllCandidatesByCompany(Long companyId) {
-
-        List<JobApplication> applications =
-                repository.findAllByCompanyId(companyId);
-
-        return applications.stream().map(app -> {
-
-            AppliedCandidateResponse res = new AppliedCandidateResponse();
-
-            // Application
-            res.setApplicationId(app.getId());
-            res.setStatus(app.getStatus());
-            res.setAppliedAt(app.getAppliedAt());
-            res.setCvFileUrl(app.getCvFile());
-
-            // Candidate
-            res.setUserId(app.getUserId());
-
-            // Job
-            Job job = app.getJob();
-            res.setJobId(job.getJobId());
-            res.setJobTitle(job.getTitle());
-            res.setLocation(job.getLocation());
-            res.setJobType(job.getJobType());
-            res.setSalaryRange(job.getSalaryRange());
-
-            return res;
-
         }).toList();
     }
 

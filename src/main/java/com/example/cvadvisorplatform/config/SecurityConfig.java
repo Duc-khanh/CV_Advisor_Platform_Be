@@ -32,21 +32,18 @@ public class SecurityConfig {
                         sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép truy cập công khai
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
 
-                        // Phân quyền dựa trên Role
-                        // Lưu ý: UserPrincipal.getAuthorities() phải trả về "ROLE_USER"
+
                         .requestMatchers("/api/user/**").hasRole("USER")
                         .requestMatchers("/api/hr/**").hasRole("HR")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // Mọi request khác đều cần đăng nhập
                         .anyRequest().authenticated()
                 )
-                // Đặt JwtFilter TRƯỚC UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -1,0 +1,24 @@
+package com.example.cvadvisorplatform.controller.hr;
+
+import com.example.cvadvisorplatform.dto.AppliedCandidateResponse;
+import com.example.cvadvisorplatform.service.JobApplicationService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@CrossOrigin(origins = "http://localhost:3000")
+@RequestMapping("/api/hr/applications")
+@RequiredArgsConstructor
+public class CompanyApplicationController {
+
+    private final JobApplicationService service;
+
+    @GetMapping
+    public List<AppliedCandidateResponse> getAllApplications(
+            @RequestParam Long companyId
+    ) {
+        return service.getAllCandidatesByCompany(companyId);
+    }
+}

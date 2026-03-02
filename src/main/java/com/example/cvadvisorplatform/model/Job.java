@@ -34,6 +34,9 @@ public class Job {
     private Boolean active = true;
     private Integer vacancies;
     private LocalDateTime expiredAt;
+    @Column(name = "image_url")
+    private String imageUrl;
+
     private Integer viewCount = 0;
 
     @ElementCollection
@@ -62,6 +65,14 @@ public class Job {
 
     public void setCompany(Company company) {
         this.company = company;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public String getTitle() {

@@ -29,8 +29,10 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // 1. Lấy Header Authorization
         String authHeader = request.getHeader("Authorization");
 
+        // 2. Nếu không có Token, cho phép đi tiếp (SecurityConfig sẽ chặn sau nếu API đó yêu cầu Auth)
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -41,6 +43,7 @@ public class JwtFilter extends OncePerRequestFilter {
         try {
             String email = jwtService.extractUsername(token);
 
+            // 3. Nếu có email và chưa được xác thực trong Context này
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 User user = userRepository.findByEmail(email).orElse(null);
@@ -55,12 +58,15 @@ public class JwtFilter extends OncePerRequestFilter {
                                     principal.getAuthorities()
                             );
 
+                    // Thêm chi tiết request vào authentication
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
+                    // 4. Lưu vào SecurityContext
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
         } catch (Exception e) {
+            // Log lỗi nhưng vẫn chạy filterChain để không làm sập ứng dụng
             logger.error("Could not set user authentication in security context", e);
         }
 

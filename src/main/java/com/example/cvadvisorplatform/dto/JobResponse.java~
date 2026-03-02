@@ -28,8 +28,6 @@ public class JobResponse {
     private LocalDateTime expiredAt;
     private Integer viewCount;
     private String candidateRequirements;
-    private String imageUrl;
-
 
 
 

@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -20,6 +21,9 @@ public class HrJobService {
 
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
+
+
 
     /* ================= LẤY HR ĐANG LOGIN ================= */
     private User getCurrentHr() {
@@ -52,7 +56,7 @@ public class HrJobService {
 
     /* ================= THÊM JOB ================= */
     @Transactional
-    public JobResponse createJob(JobCreateRequest request) {
+    public JobResponse createJob(JobCreateRequest request, MultipartFile image) {
         Company company = getHrCompany();
 
         Job job = new Job();
@@ -66,20 +70,25 @@ public class HrJobService {
         job.setJobType(request.getJobType());
         job.setVacancies(request.getVacancies());
         job.setExpiredAt(request.getExpiredAt());
-
-        // ElementCollection -> lưu vào bảng job_skills
         job.setRequiredSkills(request.getRequiredSkills());
 
         job.setActive(true);
         job.setCompany(company);
 
+        // ✅ XỬ LÝ ẢNH
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = fileStorageService.storeJobImage(image);
+            job.setImageUrl(imageUrl);
+        }
+
         jobRepository.save(job);
         return mapToResponse(job);
     }
 
+
     /* ================= SỬA JOB ================= */
     @Transactional
-    public JobResponse updateJob(Long jobId, JobCreateRequest request) {
+    public JobResponse updateJob(Long jobId, JobCreateRequest request, MultipartFile image) {
         Company company = getHrCompany();
 
         Job job = jobRepository
@@ -91,8 +100,6 @@ public class HrJobService {
         job.setDescription(request.getDescription());
         job.setCandidateRequirements(request.getCandidateRequirements());
 
-
-
         job.setLocation(request.getLocation());
         job.setSalaryRange(request.getSalaryRange());
         job.setJobType(request.getJobType());
@@ -100,9 +107,16 @@ public class HrJobService {
         job.setExpiredAt(request.getExpiredAt());
         job.setRequiredSkills(request.getRequiredSkills());
 
+        // ✅ UPDATE ẢNH (nếu có)
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = fileStorageService.storeJobImage(image);
+            job.setImageUrl(imageUrl);
+        }
+
         jobRepository.save(job);
         return mapToResponse(job);
     }
+
 
     /* ================= XÓA JOB ================= */
     @Transactional
@@ -177,6 +191,8 @@ public class HrJobService {
         dto.setRequiredSkills(job.getRequiredSkills());
         dto.setCreatedAt(job.getCreatedAt());
         dto.setCandidateRequirements(job.getCandidateRequirements());
+        dto.setImageUrl(job.getImageUrl());
+
 
         return dto;
     }
