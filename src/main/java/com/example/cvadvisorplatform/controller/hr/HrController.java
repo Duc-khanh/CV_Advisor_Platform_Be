@@ -16,5 +16,6 @@ public class HrController {
     public String manageCandidates() {
         return "HR MANAGE CANDIDATES";
     }
+
 }
 

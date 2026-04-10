@@ -38,6 +38,7 @@ dependencies {
 
     // Thymeleaf + Security
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+    testImplementation 'junit:junit:4.13.1'
 
     // MySQL
     runtimeOnly 'com.mysql:mysql-connector-j'

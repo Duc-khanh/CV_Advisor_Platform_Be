@@ -25,7 +25,6 @@ public class HrJobController {
         return hrJobService.createJob(request, image);
     }
 
-
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public JobResponse updateJob(
             @PathVariable Long id,

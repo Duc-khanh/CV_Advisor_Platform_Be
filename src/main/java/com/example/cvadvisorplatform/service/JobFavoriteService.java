@@ -42,7 +42,6 @@ public class JobFavoriteService {
         repository.save(favorite);
     }
 
-    // ✅ QUAN TRỌNG: trả DTO, không trả Entity
     @Transactional(readOnly = true)
     public List<JobPublicResponse> getListFavorites(Long userId) {
         return repository.findAllByUserId(userId)
@@ -52,7 +51,7 @@ public class JobFavoriteService {
                 .toList();
     }
 
-    // Mapper private – chuẩn, rõ ràng
+
     private JobPublicResponse mapToJobPublicResponse(Job job) {
         JobPublicResponse dto = new JobPublicResponse();
 
@@ -61,7 +60,7 @@ public class JobFavoriteService {
         dto.setCompanyName(job.getCompany().getCompanyName());
         dto.setLocation(job.getLocation());
 
-        // ✅ SỬA Ở ĐÂY
+
         dto.setJobType(job.getJobType());
         dto.setSalaryRange(job.getSalaryRange());
         dto.setExperienceLevel(job.getExperienceLevel());

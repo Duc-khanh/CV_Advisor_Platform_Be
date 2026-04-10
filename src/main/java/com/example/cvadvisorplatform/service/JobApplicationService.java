@@ -39,7 +39,7 @@ public class JobApplicationService {
 
     public void apply(Long userId, Long jobId, MultipartFile cv) throws IOException {
 
-        /* ===== VALIDATE FILE ===== */
+
         if (cv == null || cv.isEmpty()) {
             throw new RuntimeException("Vui lòng chọn file CV");
         }
@@ -51,24 +51,17 @@ public class JobApplicationService {
         if (!ALLOWED_TYPES.contains(cv.getContentType())) {
             throw new RuntimeException("Chỉ cho phép file PDF / DOC / DOCX");
         }
-
-        /* ===== CHẶN ỨNG TUYỂN TRÙNG ===== */
         if (repository.existsByUserIdAndJob_JobId(userId, jobId)) {
             throw new RuntimeException("Bạn đã ứng tuyển công việc này");
         }
-
-        /* ===== KIỂM TRA JOB ===== */
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job không tồn tại"));
-
-        /* ===== LƯU FILE ===== */
         String fileName = UUID.randomUUID() + "_" + cv.getOriginalFilename();
         Path uploadPath = Paths.get(uploadDir, "cv");
 
         Files.createDirectories(uploadPath);
         Files.copy(cv.getInputStream(), uploadPath.resolve(fileName));
 
-        /* ===== LƯU DB ===== */
         JobApplication app = new JobApplication();
         app.setUserId(userId);
         app.setJob(job);
@@ -78,11 +71,11 @@ public class JobApplicationService {
 
         repository.save(app);
     }
-    // Sửa đổi phương thức này
+
     public List<AppliedJobResponse> getApplicationsByUserId(Long userId, String status) {
         List<JobApplication> applications;
 
-        // Logic lọc: Nếu status không rỗng và không phải là "ALL"
+
         if (status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase("ALL")) {
             applications = repository.findAllByUserIdAndStatusOrderByIdDesc(userId, status);
         } else {
@@ -121,16 +114,16 @@ public class JobApplicationService {
 
             AppliedCandidateResponse res = new AppliedCandidateResponse();
 
-            // Application
+
             res.setApplicationId(app.getId());
             res.setStatus(app.getStatus());
             res.setAppliedAt(app.getAppliedAt());
             res.setCvFileUrl(app.getCvFile());
 
-            // Candidate
+
             res.setUserId(app.getUserId());
 
-            // Job
+
             Job job = app.getJob();
             res.setJobId(job.getJobId());
             res.setJobTitle(job.getTitle());
