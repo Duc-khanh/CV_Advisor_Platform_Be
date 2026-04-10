@@ -1,0 +1,31 @@
+package com.example.cvadvisorplatform.controller.hr;
+
+import com.example.cvadvisorplatform.dto.AppliedJobResponse;
+import com.example.cvadvisorplatform.service.JobApplicationService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/employer/applications")
+@RequiredArgsConstructor
+public class EmployerApplicationController {
+
+    private final JobApplicationService service;
+
+    // API duyệt hoặc từ chối đơn
+    @PatchMapping("/{applicationId}/status")
+    public void updateStatus(
+            @PathVariable Long applicationId,
+            @RequestParam String status
+    ) {
+        service.updateApplicationStatus(applicationId, status);
+    }
+
+    // API lấy toàn bộ danh sách ứng viên cho một Job của công ty
+    @GetMapping("/job/{jobId}")
+    public List<AppliedJobResponse> getApplicationsByJob(@PathVariable Long jobId) {
+        return service.getApplicationsByJobId(jobId);
+    }
+}

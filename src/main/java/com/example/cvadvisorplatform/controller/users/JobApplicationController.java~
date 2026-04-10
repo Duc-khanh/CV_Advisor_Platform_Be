@@ -1,0 +1,45 @@
+package com.example.cvadvisorplatform.controller.users;
+
+import com.example.cvadvisorplatform.dto.AppliedJobResponse;
+import com.example.cvadvisorplatform.security.UserPrincipal;
+import com.example.cvadvisorplatform.service.JobApplicationService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/user/jobs/apply")
+@RequiredArgsConstructor
+public class JobApplicationController {
+
+    private final JobApplicationService service;
+
+    @PostMapping("/{jobId}")
+    public void apply(
+            @PathVariable Long jobId,
+            @AuthenticationPrincipal UserPrincipal principal, // Lấy User từ Token
+            @RequestParam("cv") MultipartFile cv             // Chỉ định rõ name là "cv"
+    ) throws IOException {
+        // Kiểm tra xem user đã đăng nhập chưa
+        if (principal == null) {
+            throw new RuntimeException("Bạn cần đăng nhập để thực hiện chức năng này");
+        }
+
+        // Lấy userId trực tiếp từ đối tượng principal đã được JwtFilter xác thực
+        Long userId = principal.getUser().getUserId();
+
+        service.apply(userId, jobId, cv);
+    }
+    @GetMapping("/my-applications")
+    public List<AppliedJobResponse> getMyApplications(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) String status // Thêm tham số lọc
+    ) {
+        Long userId = principal.getUser().getUserId();
+        return service.getApplicationsByUserId(userId, status);
+    }
+}

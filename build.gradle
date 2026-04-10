@@ -1,12 +1,11 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.0.1'
+    id 'org.springframework.boot' version '3.4.1' // Đổi về bản ổn định
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.example'
 version = '0.0.1-SNAPSHOT'
-description = 'CvAdvisorPlatform'
 
 java {
     toolchain {
@@ -25,32 +24,40 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation 'org.springframework.boot:spring-boot-starter-restclient'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-authorization-server'
-    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'
-    implementation 'org.springframework.boot:spring-boot-starter-session-jdbc'
+    // Dotenv (Chỉ giữ lại 1 bản mới nhất)
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // Thymeleaf + Security
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
-    compileOnly 'org.projectlombok:lombok'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    testImplementation 'junit:junit:4.13.1'
+
+    // MySQL
     runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-jdbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-restclient-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-authorization-server-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-session-jdbc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-thymeleaf-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-websocket-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Dev tools
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
 }
 
 tasks.named('test') {

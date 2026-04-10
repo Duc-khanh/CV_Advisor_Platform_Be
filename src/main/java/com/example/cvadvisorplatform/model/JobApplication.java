@@ -1,0 +1,45 @@
+package com.example.cvadvisorplatform.model;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Entity
+@Table(
+        name = "job_application",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "job_id"})
+)
+@Getter
+@Setter
+public class JobApplication {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private Long userId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "job_id")
+    private Job job;
+
+    private String cvFile;
+    private Long fileSize;
+//    @OneToMany(
+//            mappedBy = "application",
+//            cascade = CascadeType.ALL,
+//            orphanRemoval = true
+//    )
+//    private List<ApplicationStatusHistory> statusHistories;
+    private String status = "PENDING";
+//    @Enumerated(EnumType.STRING) // Lưu vào DB dưới dạng String ("PENDING", "ACCEPTED"...)
+//    private ApplicationStatusHistory status = ApplicationStatusHistory.PENDING;
+
+    private LocalDateTime appliedAt = LocalDateTime.now();
+
+
+    // getter / setter
+}

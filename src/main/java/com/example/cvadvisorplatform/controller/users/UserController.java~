@@ -1,0 +1,24 @@
+package com.example.cvadvisorplatform.controller.users;
+
+import com.example.cvadvisorplatform.dto.JobPublicResponse;
+import com.example.cvadvisorplatform.service.HrJobService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/public")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final HrJobService jobService;
+
+    @GetMapping("/jobs")
+    public List<JobPublicResponse> getPublicJobs(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String location
+    ) {
+        return jobService.getPublicJobs(keyword, location);
+    }
+}

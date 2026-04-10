@@ -1,0 +1,8 @@
+package com.example.cvadvisorplatform.controller;
+
+public class UserController {
+    @GetMapping("/home")
+    public String home() {
+        return "USER HOME PUBLIC";
+    }
+}
