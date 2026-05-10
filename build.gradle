@@ -25,8 +25,11 @@ repositories {
 
 dependencies {
     // Dotenv (Chỉ giữ lại 1 bản mới nhất)
-    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+//    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+
+    // PDF
+    implementation 'org.apache.pdfbox:pdfbox:3.0.3'
 
     // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'

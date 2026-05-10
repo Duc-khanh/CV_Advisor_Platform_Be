@@ -16,7 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
-@RequiredArgsConstructor // Sử dụng Lombok để code gọn hơn
+@RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -29,8 +29,23 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        String path = request.getServletPath();
+
+        // ===== BYPASS PUBLIC API =====
+        if (
+                path.startsWith("/api/auth/")
+                        || path.startsWith("/api/v1/ai/")
+                        || path.startsWith("/api/public/")
+                        || path.startsWith("/uploads/")
+        ) {
+
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader("Authorization");
 
+        // Không có token -> cho đi tiếp
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -39,14 +54,24 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
+
             String email = jwtService.extractUsername(token);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (
+                    email != null
+                            && SecurityContextHolder
+                            .getContext()
+                            .getAuthentication() == null
+            ) {
 
-                User user = userRepository.findByEmail(email).orElse(null);
+                User user =
+                        userRepository.findByEmail(email)
+                                .orElse(null);
 
                 if (user != null) {
-                    UserPrincipal principal = new UserPrincipal(user);
+
+                    UserPrincipal principal =
+                            new UserPrincipal(user);
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
@@ -55,13 +80,23 @@ public class JwtFilter extends OncePerRequestFilter {
                                     principal.getAuthorities()
                             );
 
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authentication.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
 
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authentication);
                 }
             }
+
         } catch (Exception e) {
-            logger.error("Could not set user authentication in security context", e);
+
+            logger.error(
+                    "Could not set user authentication in security context",
+                    e
+            );
         }
 
         filterChain.doFilter(request, response);

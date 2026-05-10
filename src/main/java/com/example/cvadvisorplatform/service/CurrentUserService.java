@@ -68,7 +68,8 @@ public class CurrentUserService {
     }
 
     private String uploadAvatar(MultipartFile file) {
-        // TODO: upload thật (S3, Cloudinary, local storage…)
         return "/uploads/" + file.getOriginalFilename();
     }
+
+
 }

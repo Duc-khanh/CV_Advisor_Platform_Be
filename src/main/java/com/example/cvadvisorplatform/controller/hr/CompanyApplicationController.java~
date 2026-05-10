@@ -1,14 +1,17 @@
 package com.example.cvadvisorplatform.controller.hr;
 
 import com.example.cvadvisorplatform.dto.AppliedCandidateResponse;
+import com.example.cvadvisorplatform.dto.UpdateApplicationStatusRequest;
+import com.example.cvadvisorplatform.security.UserPrincipal;
 import com.example.cvadvisorplatform.service.JobApplicationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/hr/applications")
 @RequiredArgsConstructor
 public class CompanyApplicationController {
@@ -17,8 +20,34 @@ public class CompanyApplicationController {
 
     @GetMapping
     public List<AppliedCandidateResponse> getAllApplications(
-            @RequestParam Long companyId
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
+        if (principal == null || principal.getUser().getCompany() == null) {
+            throw new RuntimeException("Bạn chưa đăng nhập hoặc không thuộc công ty nào.");
+        }
+        Long companyId = principal.getUser().getCompany().getCompanyId();
         return service.getAllCandidatesByCompany(companyId);
+    }
+
+    @PutMapping("/{applicationId}/status")
+    public String updateApplicationStatus(
+            @PathVariable Long applicationId,
+            @RequestBody UpdateApplicationStatusRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+
+        if (principal == null || principal.getUser().getCompany() == null) {
+            throw new RuntimeException("Bạn chưa đăng nhập hoặc không thuộc công ty nào.");
+        }
+
+        Long companyId = principal.getUser().getCompany().getCompanyId();
+
+        service.updateApplicationStatus(
+                applicationId,
+                companyId,
+                request.getStatus()
+        );
+
+        return "Cập nhật trạng thái thành công";
     }
 }
