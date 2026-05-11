@@ -5,13 +5,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class CurrentUserResponse {
     private Long id;
-    private String fullName;
+    private String username;
     private String email;
+    private String fullName;
     private String role;
-    private boolean enabled;
+    private Boolean enabled;
     private String avatarUrl;
+
+    public CurrentUserResponse(Long userId, String fullName, String email, String roleName, boolean enabled, String avatar) {
+    }
 }

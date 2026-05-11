@@ -51,23 +51,16 @@ public class JobApplicationService {
         if (!ALLOWED_TYPES.contains(cv.getContentType())) {
             throw new RuntimeException("Chỉ cho phép file PDF / DOC / DOCX");
         }
-
-
         if (repository.existsByUserIdAndJob_JobId(userId, jobId)) {
             throw new RuntimeException("Bạn đã ứng tuyển công việc này");
         }
-
-
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("Job không tồn tại"));
-
-
         String fileName = UUID.randomUUID() + "_" + cv.getOriginalFilename();
         Path uploadPath = Paths.get(uploadDir, "cv");
 
         Files.createDirectories(uploadPath);
         Files.copy(cv.getInputStream(), uploadPath.resolve(fileName));
-
 
         JobApplication app = new JobApplication();
         app.setUserId(userId);
@@ -112,36 +105,73 @@ public class JobApplicationService {
     }
 
 
+    // Trong JobApplicationService.java
+
     public List<AppliedCandidateResponse> getAllCandidatesByCompany(Long companyId) {
+        // 1. Lấy danh sách ứng tuyển dựa trên companyId
+        // Lưu ý: companyId này nên lấy từ thông tin User/HR đang đăng nhập ở tầng Controller
+        List<JobApplication> applications = repository.findAllByCompanyId(companyId);
 
-        List<JobApplication> applications =
-                repository.findAllByCompanyId(companyId);
-
+        // 2. Chuyển đổi sang Response DTO
         return applications.stream().map(app -> {
-
             AppliedCandidateResponse res = new AppliedCandidateResponse();
 
-
+            // Thông tin đơn ứng tuyển
             res.setApplicationId(app.getId());
             res.setStatus(app.getStatus());
             res.setAppliedAt(app.getAppliedAt());
             res.setCvFileUrl(app.getCvFile());
-
-
             res.setUserId(app.getUserId());
 
-
+            // Thông tin công việc (Chỉ của công ty này)
             Job job = app.getJob();
-            res.setJobId(job.getJobId());
-            res.setJobTitle(job.getTitle());
-            res.setLocation(job.getLocation());
-            res.setJobType(job.getJobType());
-            res.setSalaryRange(job.getSalaryRange());
+            if (job != null) {
+                res.setJobId(job.getJobId());
+                res.setJobTitle(job.getTitle());
+                res.setLocation(job.getLocation());
+                res.setJobType(job.getJobType());
+                res.setSalaryRange(job.getSalaryRange());
+            }
 
             return res;
-
         }).toList();
     }
+    public void updateApplicationStatus(Long applicationId,
+                                        Long companyId,
+                                        String status) {
+
+        List<String> validStatus = List.of(
+                "PENDING",
+                "REVIEWING",
+                "INTERVIEW",
+                "ACCEPTED",
+                "REJECTED"
+        );
+
+        // validate status
+        if (!validStatus.contains(status.toUpperCase())) {
+            throw new RuntimeException("Trạng thái không hợp lệ");
+        }
+
+        JobApplication application = repository.findById(applicationId)
+                .orElseThrow(() ->
+                        new RuntimeException("Không tìm thấy đơn ứng tuyển"));
+
+        // kiểm tra job có thuộc company đang đăng nhập không
+        if (!application.getJob()
+                .getCompany()
+                .getCompanyId()
+                .equals(companyId)) {
+
+            throw new RuntimeException("Bạn không có quyền cập nhật đơn này");
+        }
+
+        application.setStatus(status.toUpperCase());
+
+        repository.save(application);
+    }
+
+
 
 }
 

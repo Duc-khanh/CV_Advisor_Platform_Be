@@ -3,6 +3,7 @@ package com.example.cvadvisorplatform.controller;
 import com.example.cvadvisorplatform.dto.AuthResponse;
 import com.example.cvadvisorplatform.dto.LoginRequest;
 import com.example.cvadvisorplatform.dto.RegisterRequest;
+import com.example.cvadvisorplatform.dto.RegisterHrRequest;
 import com.example.cvadvisorplatform.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,12 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         authService.register(request);
         return ResponseEntity.ok().body("Register success");
+    }
+
+    @PostMapping("/register-hr")
+    public ResponseEntity<?> registerHr(@RequestBody RegisterHrRequest request) {
+        authService.registerHr(request);
+        return ResponseEntity.ok().body("Register HR success");
     }
 
     @PostMapping("/login")

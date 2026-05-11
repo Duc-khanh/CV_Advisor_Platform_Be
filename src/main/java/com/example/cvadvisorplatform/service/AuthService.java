@@ -11,6 +11,11 @@ import com.example.cvadvisorplatform.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.example.cvadvisorplatform.dto.RegisterHrRequest;
+import com.example.cvadvisorplatform.model.Company;
+import com.example.cvadvisorplatform.model.Industry;
+import com.example.cvadvisorplatform.repository.CompanyRepository;
+import com.example.cvadvisorplatform.repository.IndustryRepository;
 
 
 
@@ -22,6 +27,8 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final CompanyRepository companyRepository;
+    private final IndustryRepository industryRepository;
 
     public void register(RegisterRequest request) {
 
@@ -37,6 +44,38 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
+
+        userRepository.save(user);
+    }
+
+    public void registerHr(RegisterHrRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        Role role = roleRepository.findByRoleName("HR")
+                .orElseThrow(() -> new RuntimeException("Role HR not found"));
+
+        Industry industry = industryRepository.findByIndustryName(request.getIndustryName())
+                .orElseGet(() -> {
+                    Industry newIndustry = new Industry();
+                    newIndustry.setIndustryName(request.getIndustryName());
+                    return industryRepository.save(newIndustry);
+                });
+
+        Company company = new Company();
+        company.setCompanyName(request.getCompanyName());
+        company.setIndustry(industry);
+        company.setAddress(request.getAddress());
+        company.setDescription(request.getDescription());
+        company = companyRepository.save(company);
+
+        User user = new User();
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(role);
+        user.setCompany(company);
 
         userRepository.save(user);
     }
