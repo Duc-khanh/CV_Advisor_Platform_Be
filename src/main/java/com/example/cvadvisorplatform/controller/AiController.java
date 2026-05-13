@@ -2,6 +2,7 @@ package com.example.cvadvisorplatform.controller;
 
 import com.example.cvadvisorplatform.dto.AiCvEvaluationRequest;
 import com.example.cvadvisorplatform.dto.AiCvEvaluationResponse;
+import com.example.cvadvisorplatform.dto.CareerRoadmapResponse;
 import com.example.cvadvisorplatform.service.OpenRouterService;
 import com.example.cvadvisorplatform.service.PdfTextExtractorService;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,25 @@ public class AiController {
 
         AiCvEvaluationResponse response =
                 openRouterService.evaluateCv(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(
+            value = "/career-roadmap",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<CareerRoadmapResponse> generateCareerRoadmap(
+            @RequestParam("cv") MultipartFile cvFile,
+            @RequestParam(value = "targetRole", required = false, defaultValue = "") String targetRole,
+            @RequestParam(value = "desiredRoadmap", required = false, defaultValue = "") String desiredRoadmap
+    ) throws Exception {
+
+        // extract text từ PDF
+        String cvContent = pdfTextExtractorService.extractText(cvFile);
+
+        CareerRoadmapResponse response =
+                openRouterService.generateCareerRoadmap(cvContent, targetRole, desiredRoadmap);
 
         return ResponseEntity.ok(response);
     }

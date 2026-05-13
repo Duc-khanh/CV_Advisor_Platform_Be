@@ -2,6 +2,7 @@ package com.example.cvadvisorplatform.service;
 
 import com.example.cvadvisorplatform.dto.JobPublicResponse;
 import com.example.cvadvisorplatform.model.Job;
+import com.example.cvadvisorplatform.repository.JobFavoriteRepository;
 import com.example.cvadvisorplatform.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,8 +15,9 @@ import java.util.List;
 public class PublicJobService {
 
     private final JobRepository jobRepository;
+    private final JobFavoriteRepository jobFavoriteRepository;
 
-    public List<JobPublicResponse> getPublicJobs(String keyword, String location) {
+    public List<JobPublicResponse> getPublicJobs(String keyword, String location, Long userId) {
 
         List<Job> jobs;
 
@@ -42,11 +44,11 @@ public class PublicJobService {
         }
 
         return jobs.stream()
-                .map(this::mapToPublicResponse)
+                .map(job -> mapToPublicResponse(job, userId))
                 .toList();
     }
 
-    private JobPublicResponse mapToPublicResponse(Job job) {
+    private JobPublicResponse mapToPublicResponse(Job job, Long userId) {
         JobPublicResponse dto = new JobPublicResponse();
 
         dto.setJobId(job.getJobId());
@@ -62,22 +64,28 @@ public class PublicJobService {
         dto.setDescription(job.getDescription());
         dto.setCandidateRequirements(job.getCandidateRequirements());
 
-
         dto.setRequiredSkills(job.getRequiredSkills());
         dto.setViewCount(job.getViewCount());
         dto.setCreatedAt(job.getCreatedAt());
         dto.setExpiredAt(job.getExpiredAt());
 
+        // Kiểm tra trạng thái yêu thích nếu user đã đăng nhập
+        if (userId != null) {
+            dto.setFavorite(jobFavoriteRepository.existsByUserIdAndJob_JobId(userId, job.getJobId()));
+        } else {
+            dto.setFavorite(false);
+        }
+
         return dto;
     }
 
     @Transactional
-    public JobPublicResponse getJobById(Long id) {
+    public JobPublicResponse getJobById(Long id, Long userId) {
         jobRepository.incrementViewCount(id);
 
         Job job = jobRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + id));
 
-        return mapToPublicResponse(job);
+        return mapToPublicResponse(job, userId);
     }
 }

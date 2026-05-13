@@ -23,11 +23,9 @@ public class JobFavoriteService {
     }
 
     @Transactional
-    public void toggleFavorite(Long userId, Long jobId) {
-
+    public void addFavorite(Long userId, Long jobId) {
         if (repository.existsByUserIdAndJob_JobId(userId, jobId)) {
-            repository.deleteByUserIdAndJob_JobId(userId, jobId);
-            return;
+            throw new RuntimeException("ALREADY_FAVORITED");
         }
 
         Job job = jobRepository.findById(jobId)
@@ -40,6 +38,14 @@ public class JobFavoriteService {
         favorite.setJob(job);
 
         repository.save(favorite);
+    }
+
+    @Transactional
+    public void removeFavorite(Long userId, Long jobId) {
+        if (!repository.existsByUserIdAndJob_JobId(userId, jobId)) {
+            throw new RuntimeException("NOT_FAVORITED");
+        }
+        repository.deleteByUserIdAndJob_JobId(userId, jobId);
     }
 
     @Transactional(readOnly = true)
