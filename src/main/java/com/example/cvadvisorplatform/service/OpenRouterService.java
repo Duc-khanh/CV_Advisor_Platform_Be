@@ -1,5 +1,6 @@
 package com.example.cvadvisorplatform.service;
 
+import com.example.cvadvisorplatform.dto.AiCandidateFitResponse;
 import com.example.cvadvisorplatform.dto.AiCvEvaluationRequest;
 import com.example.cvadvisorplatform.dto.AiCvEvaluationResponse;
 import com.example.cvadvisorplatform.dto.CareerRoadmapResponse;
@@ -328,6 +329,52 @@ public class OpenRouterService {
 
         return basePrompt.toString();
     }
+    private String buildCandidateFitPrompt(
+            String cvContent,
+            String jobDescription
+    ) {
+        return """
+            Bạn là chuyên gia tuyển dụng HR có kinh nghiệm đánh giá CV theo JD.
+
+            Nhiệm vụ:
+            - So sánh CV của ứng viên với Job Description.
+            - Chấm điểm mức độ phù hợp từ 0 đến 100.
+            - Phân tích điểm mạnh của ứng viên so với JD.
+            - Phân tích điểm còn thiếu hoặc chưa phù hợp.
+            - Đưa ra khuyến nghị cho HR: nên loại, cân nhắc, phỏng vấn, hoặc rất phù hợp.
+
+            Quy tắc:
+            - Không tự bịa kinh nghiệm nếu CV không có.
+            - Nếu CV thiếu thông tin, hãy nêu rõ.
+            - Đánh giá khách quan, ngắn gọn, dễ hiểu.
+            - Trả lời hoàn toàn bằng tiếng Việt.
+            - Bắt buộc chỉ trả về JSON, không kèm markdown, không kèm giải thích bên ngoài.
+
+            ====================================
+            JOB DESCRIPTION:
+            %s
+            ====================================
+
+            CV ỨNG VIÊN:
+            %s
+            ====================================
+
+            Format JSON bắt buộc:
+            {
+              "score": 85,
+              "summary": "Ứng viên phù hợp với vị trí vì...",
+              "strengths": [
+                "Điểm mạnh 1",
+                "Điểm mạnh 2"
+              ],
+              "weaknesses": [
+                "Điểm còn thiếu 1",
+                "Điểm còn thiếu 2"
+              ],
+              "recommendations": "Nên đưa ứng viên vào vòng phỏng vấn kỹ thuật."
+            }
+            """.formatted(jobDescription, cvContent);
+    }
 
     private String readFile(String filePath) {
         try {
@@ -488,5 +535,56 @@ public class OpenRouterService {
                     e.getMessage()
             );
         }
+    }
+    public AiCandidateFitResponse evaluateCandidateFit(
+            String cvContent,
+            String jobDescription
+    ) {
+        if (cvContent == null || cvContent.isBlank()) {
+            throw new RuntimeException("Nội dung CV không được để trống");
+        }
+
+        if (jobDescription == null || jobDescription.isBlank()) {
+            throw new RuntimeException("Job Description không được để trống");
+        }
+
+        String prompt = buildCandidateFitPrompt(cvContent, jobDescription);
+
+        String aiResponse = callOpenRouterApi(prompt);
+
+        AiCandidateFitResponse.AiCandidateFitResponseBuilder builder =
+                AiCandidateFitResponse.builder()
+                        .rawAiResponse(aiResponse);
+
+        try {
+            String jsonContent = aiResponse
+                    .replaceAll("(?s).*?```(?:json)?\\n?(.*?)\\n?```.*", "$1")
+                    .trim();
+
+            if (!jsonContent.startsWith("{")) {
+                jsonContent = aiResponse.trim();
+            }
+
+            JsonNode parsed = objectMapper.readTree(jsonContent);
+
+            builder.score(parsed.path("score").asInt(0));
+            builder.summary(parsed.path("summary").asText(""));
+
+            java.util.List<String> strengths = new java.util.ArrayList<>();
+            parsed.path("strengths").forEach(n -> strengths.add(n.asText()));
+            builder.strengths(strengths);
+
+            java.util.List<String> weaknesses = new java.util.ArrayList<>();
+            parsed.path("weaknesses").forEach(n -> weaknesses.add(n.asText()));
+            builder.weaknesses(weaknesses);
+
+            builder.recommendations(parsed.path("recommendations").asText(""));
+
+        } catch (Exception e) {
+            log.warn("Không thể parse AI Candidate Fit response. Lỗi: {}", e.getMessage());
+            throw new RuntimeException("AI trả về kết quả đánh giá không hợp lệ, vui lòng thử lại.");
+        }
+
+        return builder.build();
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.cvadvisorplatform.dto.AiCandidateFitResponse;
 
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -71,4 +72,24 @@ public class AiController {
 
         return ResponseEntity.ok(response);
     }
+
+//    @PostMapping(
+//            value = "/candidate-fit",
+//            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+//    )
+//    public ResponseEntity<AiCandidateFitResponse> evaluateCandidateFit(
+//            @RequestParam("cv") MultipartFile cvFile,
+//            @RequestParam("jobDescription") String jobDescription
+//    ) throws Exception {
+//
+//        String cvContent = pdfTextExtractorService.extractText(cvFile);
+//
+//        AiCandidateFitResponse response =
+//                openRouterService.evaluateCandidateFit(
+//                        cvContent,
+//                        jobDescription
+//                );
+//
+//        return ResponseEntity.ok(response);
+//    }
 }
