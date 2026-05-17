@@ -25,7 +25,4 @@ public class AppliedCandidateResponse {
     private String location;
     private String jobType;
     private String salaryRange;
-
-    private String fullName;
-    private String email;
 }

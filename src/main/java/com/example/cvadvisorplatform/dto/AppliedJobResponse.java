@@ -12,6 +12,8 @@ public class AppliedJobResponse {
     private String status;           // PENDING, ACCEPTED, REJECTED
     private LocalDateTime applyDate; // Ngày nộp hồ sơ
     private String cvFileUrl;        // Link để user có thể xem lại CV đã nộp
+//    private String fullName;
+//    private String email;
 
     // Chứa thông tin Job bên trong
     private JobPublicResponse job;

@@ -6,24 +6,35 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
-public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
+public interface JobApplicationRepository
+        extends JpaRepository<JobApplication, Long> {
 
-    boolean existsByUserIdAndJob_JobId(Long userId, Long jobId);
-    List<JobApplication> findAllByUserIdOrderByIdDesc(Long userId);
+    // check đã apply chưa
+    boolean existsByUser_UserIdAndJob_JobId(
+            Long userId,
+            Long jobId
+    );
 
+    // lấy application theo user
+    List<JobApplication> findAllByUser_UserIdOrderByIdDesc(
+            Long userId
+    );
 
-    List<JobApplication> findAllByUserIdAndStatusOrderByIdDesc(Long userId, String status);
-        @Query("""
-        SELECT ja FROM JobApplication ja
-        JOIN ja.job j
-        JOIN j.company c
-        WHERE c.companyId = :companyId
+    // filter theo status
+    List<JobApplication>
+    findAllByUser_UserIdAndStatusOrderByIdDesc(
+            Long userId,
+            String status
+    );
+
+    // HR lấy toàn bộ ứng viên của company
+    @Query("""
+        SELECT ja
+        FROM JobApplication ja
+        WHERE ja.job.company.companyId = :companyId
         ORDER BY ja.appliedAt DESC
     """)
-        List<JobApplication> findAllByCompanyId(Long companyId);
-
-
-
-
+    List<JobApplication> findAllByCompanyId(
+            Long companyId
+    );
 }
-

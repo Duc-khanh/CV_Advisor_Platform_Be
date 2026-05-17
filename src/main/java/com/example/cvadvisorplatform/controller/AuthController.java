@@ -3,6 +3,8 @@ package com.example.cvadvisorplatform.controller;
 import com.example.cvadvisorplatform.dto.AuthResponse;
 import com.example.cvadvisorplatform.dto.LoginRequest;
 import com.example.cvadvisorplatform.dto.RegisterRequest;
+import com.example.cvadvisorplatform.dto.RegisterHrRequest;
+import com.example.cvadvisorplatform.dto.GoogleLoginRequest;
 import com.example.cvadvisorplatform.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +26,25 @@ public class AuthController {
         return ResponseEntity.ok().body("Register success");
     }
 
+    @PostMapping("/register-hr")
+    public ResponseEntity<?> registerHr(@RequestBody RegisterHrRequest request) {
+        authService.registerHr(request);
+        return ResponseEntity.ok().body("Register HR success");
+    }
+
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         String token = authService.login(request);
         return ResponseEntity.ok(new AuthResponse(token));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(@RequestBody GoogleLoginRequest request) {
+        try {
+            String token = authService.loginWithGoogle(request.getToken());
+            return ResponseEntity.ok(new AuthResponse(token));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new AuthResponse(null));
+        }
     }
 }

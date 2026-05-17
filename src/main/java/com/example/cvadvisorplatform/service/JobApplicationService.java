@@ -5,8 +5,10 @@ import com.example.cvadvisorplatform.dto.AppliedJobResponse;
 import com.example.cvadvisorplatform.dto.JobPublicResponse;
 import com.example.cvadvisorplatform.model.Job;
 import com.example.cvadvisorplatform.model.JobApplication;
+import com.example.cvadvisorplatform.model.User;
 import com.example.cvadvisorplatform.repository.JobApplicationRepository;
 import com.example.cvadvisorplatform.repository.JobRepository;
+import com.example.cvadvisorplatform.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -23,7 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JobApplicationService {
 
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     private static final List<String> ALLOWED_TYPES = List.of(
             "application/pdf",
@@ -33,12 +35,15 @@ public class JobApplicationService {
 
     private final JobApplicationRepository repository;
     private final JobRepository jobRepository;
+    private final UserRepository userRepository;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    public void apply(Long userId, Long jobId, MultipartFile cv) throws IOException {
-
+    // APPLY JOB
+    public void apply(Long userId,
+                      Long jobId,
+                      MultipartFile cv) throws IOException {
 
         if (cv == null || cv.isEmpty()) {
             throw new RuntimeException("Vui lòng chọn file CV");
@@ -51,91 +56,195 @@ public class JobApplicationService {
         if (!ALLOWED_TYPES.contains(cv.getContentType())) {
             throw new RuntimeException("Chỉ cho phép file PDF / DOC / DOCX");
         }
-        if (repository.existsByUserIdAndJob_JobId(userId, jobId)) {
+
+        if (repository.existsByUser_UserIdAndJob_JobId(userId, jobId)) {
             throw new RuntimeException("Bạn đã ứng tuyển công việc này");
         }
+
         Job job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Job không tồn tại"));
-        String fileName = UUID.randomUUID() + "_" + cv.getOriginalFilename();
+                .orElseThrow(() ->
+                        new RuntimeException("Job không tồn tại"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new RuntimeException("User không tồn tại"));
+
+        String fileName =
+                UUID.randomUUID() + "_" + cv.getOriginalFilename();
+
         Path uploadPath = Paths.get(uploadDir, "cv");
 
         Files.createDirectories(uploadPath);
-        Files.copy(cv.getInputStream(), uploadPath.resolve(fileName));
+
+        Files.copy(
+                cv.getInputStream(),
+                uploadPath.resolve(fileName)
+        );
 
         JobApplication app = new JobApplication();
-        app.setUserId(userId);
+
+        app.setUser(user);
         app.setJob(job);
         app.setCvFile(fileName);
         app.setFileSize(cv.getSize());
 
-
         repository.save(app);
     }
 
-    public List<AppliedJobResponse> getApplicationsByUserId(Long userId, String status) {
+    // USER APPLICATIONS
+    public List<AppliedJobResponse> getApplicationsByUserId(
+            Long userId,
+            String status
+    ) {
+
         List<JobApplication> applications;
 
+        if (status != null &&
+                !status.trim().isEmpty() &&
+                !status.equalsIgnoreCase("ALL")) {
 
-        if (status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase("ALL")) {
-            applications = repository.findAllByUserIdAndStatusOrderByIdDesc(userId, status);
+            applications =
+                    repository.findAllByUser_UserIdAndStatusOrderByIdDesc(
+                            userId,
+                            status
+                    );
+
         } else {
-            applications = repository.findAllByUserIdOrderByIdDesc(userId);
+
+            applications =
+                    repository.findAllByUser_UserIdOrderByIdDesc(userId);
         }
 
         return applications.stream().map(app -> {
-            AppliedJobResponse res = new AppliedJobResponse();
+
+            AppliedJobResponse res =
+                    new AppliedJobResponse();
+
             res.setApplicationId(app.getId());
             res.setStatus(app.getStatus());
             res.setApplyDate(app.getAppliedAt());
             res.setCvFileUrl(app.getCvFile());
 
             Job job = app.getJob();
+
             if (job != null) {
-                JobPublicResponse jobRes = new JobPublicResponse();
+
+                JobPublicResponse jobRes =
+                        new JobPublicResponse();
+
                 jobRes.setJobId(job.getJobId());
                 jobRes.setTitle(job.getTitle());
-                jobRes.setCompanyName(job.getCompany().getCompanyName());
+                jobRes.setCompanyName(
+                        job.getCompany().getCompanyName()
+                );
                 jobRes.setLocation(job.getLocation());
                 jobRes.setJobType(job.getJobType());
                 jobRes.setSalaryRange(job.getSalaryRange());
+
                 res.setJob(jobRes);
             }
+
             return res;
+
         }).toList();
     }
 
-
-    public List<AppliedCandidateResponse> getAllCandidatesByCompany(Long companyId) {
+    // HR GET ALL CANDIDATES
+    public List<AppliedCandidateResponse>
+    getAllCandidatesByCompany(Long companyId) {
 
         List<JobApplication> applications =
                 repository.findAllByCompanyId(companyId);
 
         return applications.stream().map(app -> {
 
-            AppliedCandidateResponse res = new AppliedCandidateResponse();
-
+            AppliedCandidateResponse res =
+                    new AppliedCandidateResponse();
 
             res.setApplicationId(app.getId());
             res.setStatus(app.getStatus());
             res.setAppliedAt(app.getAppliedAt());
             res.setCvFileUrl(app.getCvFile());
 
+            // USER INFO
+            if (app.getUser() != null) {
 
-            res.setUserId(app.getUserId());
+                res.setUserId(app.getUser().getUserId());
 
+                res.setFullName(
+                        app.getUser().getFullName()
+                );
 
+                res.setEmail(
+                        app.getUser().getEmail()
+                );
+            }
+
+            // JOB INFO
             Job job = app.getJob();
-            res.setJobId(job.getJobId());
-            res.setJobTitle(job.getTitle());
-            res.setLocation(job.getLocation());
-            res.setJobType(job.getJobType());
-            res.setSalaryRange(job.getSalaryRange());
+
+            if (job != null) {
+
+                res.setJobId(job.getJobId());
+
+                res.setJobTitle(job.getTitle());
+
+                res.setLocation(job.getLocation());
+
+                res.setJobType(job.getJobType());
+
+                res.setSalaryRange(
+                        job.getSalaryRange()
+                );
+            }
 
             return res;
 
         }).toList();
     }
 
+    // UPDATE STATUS
+    public void updateApplicationStatus(
+            Long applicationId,
+            Long companyId,
+            String status
+    ) {
+
+        List<String> validStatus = List.of(
+                "PENDING",
+                "REVIEWED",
+                "INTERVIEW",
+                "ACCEPTED",
+                "REJECTED"
+        );
+
+        if (!validStatus.contains(status.toUpperCase())) {
+            throw new RuntimeException(
+                    "Trạng thái không hợp lệ"
+            );
+        }
+
+        JobApplication application =
+                repository.findById(applicationId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Không tìm thấy đơn ứng tuyển"
+                                ));
+
+        if (!application.getJob()
+                .getCompany()
+                .getCompanyId()
+                .equals(companyId)) {
+
+            throw new RuntimeException(
+                    "Bạn không có quyền cập nhật đơn này"
+            );
+        }
+
+        application.setStatus(
+                status.toUpperCase()
+        );
+
+        repository.save(application);
+    }
 }
-
-

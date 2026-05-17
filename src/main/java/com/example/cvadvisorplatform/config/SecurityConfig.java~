@@ -31,16 +31,17 @@ public class SecurityConfig {
                 .sessionManagement(sess ->
                         sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                // Sửa đoạn này trong file SecurityConfig.java
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                        .requestMatchers("/api/v1/ai/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
-
-                        .requestMatchers("/api/user/**").hasRole("USER")
-                        .requestMatchers("/api/hr/**").hasRole("HR")
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Thay đổi ở đây: dùng hasAuthority thay vì hasRole
+                        .requestMatchers("/api/user/**").hasAuthority("USER")
+                        .requestMatchers("/api/hr/**").hasAuthority("HR")
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
 
                         .anyRequest().authenticated()
                 )
