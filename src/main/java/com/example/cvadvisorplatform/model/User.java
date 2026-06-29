@@ -71,6 +71,9 @@ public class User {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    @Column(length = 20)
+    private String hrApprovalStatus; // PENDING, APPROVED, REJECTED (null for normal users)
+
     @Column(updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

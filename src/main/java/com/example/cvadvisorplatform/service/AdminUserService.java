@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -98,6 +99,27 @@ public class AdminUserService {
         userRepository.save(user);
     }
 
+    /* ===== PHÊ DUYỆT NHÀ TUYỂN DỤNG ===== */
+    public AdminUserResponse approveHrStatus(Long id, String status) {
+        User user = findUser(id);
+        if (!"HR".equals(user.getRole().getRoleName())) {
+            throw new RuntimeException("Chỉ có thể phê duyệt cho tài khoản Nhà tuyển dụng (HR)");
+        }
+
+        if ("APPROVED".equalsIgnoreCase(status)) {
+            user.setHrApprovalStatus("APPROVED");
+            user.setEnabled(true);
+        } else if ("REJECTED".equalsIgnoreCase(status)) {
+            user.setHrApprovalStatus("REJECTED");
+            user.setEnabled(false);
+        } else {
+            throw new IllegalArgumentException("Trạng thái không hợp lệ: " + status);
+        }
+
+        userRepository.save(user);
+        return toDto(user);
+    }
+
     /* ===== HELPER ===== */
     private User findUser(Long id) {
         return userRepository.findById(id)
@@ -144,10 +166,14 @@ public class AdminUserService {
         dto.setAvatar(user.getAvatar());
         dto.setAvatarUrl(user.getAvatar());
         dto.setEnabled(user.isEnabled());
+        dto.setHrApprovalStatus(user.getHrApprovalStatus());
+        if (user.getCompany() != null) {
+            dto.setCompanyName(user.getCompany().getCompanyName());
+        }
         return dto;
     }
-    public Page<AdminUserResponse> getAllUsers(String search, String role, Boolean enabled, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public Page<AdminUserResponse> getAllUsers(String search, String role, Boolean enabled, Boolean excludeHr, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "userId"));
 
         Specification<User> spec = Specification.where(null);
 
@@ -163,6 +189,11 @@ public class AdminUserService {
         if (role != null && !role.isEmpty()) {
             spec = spec.and((root, query, cb) ->
                     cb.equal(root.get("role").get("roleName"), role));
+        }
+
+        if (excludeHr != null && excludeHr) {
+            spec = spec.and((root, query, cb) ->
+                    cb.notEqual(root.get("role").get("roleName"), "HR"));
         }
 
         if (enabled != null) {

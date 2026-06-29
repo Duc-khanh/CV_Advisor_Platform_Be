@@ -78,6 +78,8 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
         user.setCompany(company);
+        user.setEnabled(false);
+        user.setHrApprovalStatus("PENDING");
 
         userRepository.save(user);
     }
@@ -91,6 +93,11 @@ public class AuthService {
         }
 
         if (!user.isEnabled()) {
+            if ("PENDING".equals(user.getHrApprovalStatus())) {
+                throw new RuntimeException("Tài khoản nhà tuyển dụng của bạn đang chờ Admin phê duyệt.");
+            } else if ("REJECTED".equals(user.getHrApprovalStatus())) {
+                throw new RuntimeException("Yêu cầu đăng ký nhà tuyển dụng của bạn đã bị từ chối.");
+            }
             throw new RuntimeException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin.");
         }
 

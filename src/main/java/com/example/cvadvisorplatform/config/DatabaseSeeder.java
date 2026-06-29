@@ -202,6 +202,9 @@ public class DatabaseSeeder implements CommandLineRunner {
             user.setRole(role);
             user.setCompany(company);
             user.setEnabled(true);
+            if ("HR".equals(role.getRoleName())) {
+                user.setHrApprovalStatus("APPROVED");
+            }
             log.info("Seeding user: {}", email);
             return userRepository.save(user);
         } else {
@@ -211,6 +214,12 @@ public class DatabaseSeeder implements CommandLineRunner {
                 user.setCompany(company);
                 updated = true;
                 log.info("Updating existing HR user {} with company: {}", email, company.getCompanyName());
+            }
+            // Set seeded HR users to APPROVED if status is not set
+            if ("HR".equals(role.getRoleName()) && user.getHrApprovalStatus() == null) {
+                user.setHrApprovalStatus("APPROVED");
+                user.setEnabled(true);
+                updated = true;
             }
             // Đảm bảo role được cập nhật đúng
             if (user.getRole() == null || !user.getRole().getRoleName().equals(role.getRoleName())) {

@@ -11,4 +11,6 @@ public class AdminUserResponse {
     private String avatar;
     private String avatarUrl;
     private boolean enabled;
+    private String hrApprovalStatus;
+    private String companyName;
 }

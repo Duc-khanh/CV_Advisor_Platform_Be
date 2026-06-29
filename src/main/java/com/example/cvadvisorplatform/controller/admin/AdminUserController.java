@@ -28,10 +28,11 @@ public class AdminUserController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) Boolean enabled,
+            @RequestParam(required = false) Boolean excludeHr,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return service.getAllUsers(search, role, enabled, page, size);
+        return service.getAllUsers(search, role, enabled, excludeHr, page, size);
     }
 
     @GetMapping("/{id}")
@@ -59,5 +60,13 @@ public class AdminUserController {
     @PutMapping("/{id}/toggle-status")
     public void toggle(@PathVariable Long id) {
         service.toggleStatus(id);
+    }
+
+    @PutMapping("/{id}/hr-approval")
+    public AdminUserResponse approveHr(
+            @PathVariable Long id,
+            @RequestParam String status
+    ) {
+        return service.approveHrStatus(id, status);
     }
 }
