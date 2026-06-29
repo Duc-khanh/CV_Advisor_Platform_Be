@@ -30,8 +30,10 @@ public class AdminUserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CloudinaryService cloudinaryService;
 
-    private final String UPLOAD_DIR = "uploads/avatars/";
+    @org.springframework.beans.factory.annotation.Value("${file.upload-dir:uploads}")
+    private String uploadDir;
 
     /* ===== DANH SÁCH ===== */
     public List<AdminUserResponse> getAllUsers() {
@@ -108,14 +110,28 @@ public class AdminUserService {
     }
 
     private String saveAvatar(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
+        // 1. Sử dụng Cloudinary nếu có cấu hình
+        if (cloudinaryService.isConfigured()) {
+            return cloudinaryService.uploadFile(file, "cv_platform/avatars");
+        }
+
+        // 2. Chế độ dự phòng Local Fallback
         try {
-            Files.createDirectories(Paths.get(UPLOAD_DIR));
+            Path targetDir = Paths.get(uploadDir, "avatars");
+            Files.createDirectories(targetDir);
+
             String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            Path path = Paths.get(UPLOAD_DIR + fileName);
+            Path path = targetDir.resolve(fileName);
+
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
+
             return "/uploads/avatars/" + fileName;
         } catch (Exception e) {
-            throw new RuntimeException("Upload avatar failed");
+            throw new RuntimeException("Upload avatar thất bại: " + e.getMessage(), e);
         }
     }
 
@@ -126,6 +142,7 @@ public class AdminUserService {
         dto.setEmail(user.getEmail());
         dto.setRole(user.getRole().getRoleName());
         dto.setAvatar(user.getAvatar());
+        dto.setAvatarUrl(user.getAvatar());
         dto.setEnabled(user.isEnabled());
         return dto;
     }

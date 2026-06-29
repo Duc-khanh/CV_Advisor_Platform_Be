@@ -9,5 +9,6 @@ public class AdminUserResponse {
     private String email;
     private String role;
     private String avatar;
+    private String avatarUrl;
     private boolean enabled;
 }

@@ -25,22 +25,22 @@ public class PublicJobService {
                 && location != null && !location.isBlank()) {
 
             jobs = jobRepository
-                    .findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(
+                    .findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(
                             keyword, location
                     );
 
         } else if (keyword != null && !keyword.isBlank()) {
 
             jobs = jobRepository
-                    .findByActiveTrueAndTitleContainingIgnoreCase(keyword);
+                    .findByActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(keyword);
 
         } else if (location != null && !location.isBlank()) {
 
             jobs = jobRepository
-                    .findByActiveTrueAndLocationContainingIgnoreCase(location);
+                    .findByActiveTrueAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(location);
 
         } else {
-            jobs = jobRepository.findByActiveTrue();
+            jobs = jobRepository.findByActiveTrueOrderByCreatedAtDesc();
         }
 
         return jobs.stream()
@@ -69,6 +69,13 @@ public class PublicJobService {
         dto.setCreatedAt(job.getCreatedAt());
         dto.setExpiredAt(job.getExpiredAt());
 
+        dto.setImageUrl(job.getImageUrl());
+        if (job.getCompany() != null && job.getCompany().getLogoUrl() != null && !job.getCompany().getLogoUrl().isBlank()) {
+            dto.setCompanyLogo(job.getCompany().getLogoUrl());
+        } else {
+            dto.setCompanyLogo(job.getImageUrl());
+        }
+
         // Kiểm tra trạng thái yêu thích nếu user đã đăng nhập
         if (userId != null) {
             dto.setFavorite(jobFavoriteRepository.existsByUserIdAndJob_JobId(userId, job.getJobId()));
@@ -87,5 +94,12 @@ public class PublicJobService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc với ID: " + id));
 
         return mapToPublicResponse(job, userId);
+    }
+
+    public List<JobPublicResponse> getActiveJobsByCompanyId(Long companyId, Long userId) {
+        List<Job> jobs = jobRepository.findByCompanyCompanyIdAndActiveTrueOrderByCreatedAtDesc(companyId);
+        return jobs.stream()
+                .map(job -> mapToPublicResponse(job, userId))
+                .toList();
     }
 }

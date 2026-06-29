@@ -39,3 +39,6 @@ out/
 # Backup files
 *~
 *.swp
+### Custom Logs ###
+*.log
+server_start.log

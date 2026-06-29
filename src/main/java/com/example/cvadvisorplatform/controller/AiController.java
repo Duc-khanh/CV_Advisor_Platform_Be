@@ -34,7 +34,6 @@ public class AiController {
 
     ) throws Exception {
 
-        // extract text từ PDF
         String cvContent =
                 pdfTextExtractorService.extractText(cvFile);
 
@@ -64,7 +63,6 @@ public class AiController {
             @RequestParam(value = "desiredRoadmap", required = false, defaultValue = "") String desiredRoadmap
     ) throws Exception {
 
-        // extract text từ PDF
         String cvContent = pdfTextExtractorService.extractText(cvFile);
 
         CareerRoadmapResponse response =

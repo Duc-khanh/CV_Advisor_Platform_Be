@@ -27,13 +27,15 @@ public class MyUserDetailsService implements UserDetailsService {
                         new UsernameNotFoundException("User not found")
                 );
 
+        String roleName = user.getRole().getRoleName();
+        if (roleName != null && !roleName.toUpperCase().startsWith("ROLE_")) {
+            roleName = "ROLE_" + roleName;
+        }
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
                 List.of(
-                        new SimpleGrantedAuthority(
-                                "ROLE_" + user.getRole().getRoleName()
-                        )
+                        new SimpleGrantedAuthority(roleName)
                 )
         );
     }

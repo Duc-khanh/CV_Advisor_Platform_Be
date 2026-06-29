@@ -80,6 +80,9 @@ public class JobFavoriteService {
         dto.setCreatedAt(job.getCreatedAt());
         dto.setExpiredAt(job.getExpiredAt());
 
+        dto.setImageUrl(job.getImageUrl());
+        dto.setCompanyLogo(job.getImageUrl());
+
         return dto;
     }
 

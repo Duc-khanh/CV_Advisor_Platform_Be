@@ -32,4 +32,7 @@ public class JobPublicResponse {
     // Trạng thái yêu thích của user hiện tại (chỉ set khi user đã đăng nhập)
     private boolean isFavorite;
 
+    private String imageUrl;
+    private String companyLogo;
+
 }

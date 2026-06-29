@@ -65,10 +65,7 @@ public class OpenRouterService {
                 .rawAiResponse(aiResponse);
 
         try {
-            String jsonContent = aiResponse.replaceAll("(?s).*?```(?:json)?\\n?(.*?)\\n?```.*", "$1").trim();
-            if (!jsonContent.startsWith("{")) {
-                jsonContent = aiResponse.trim();
-            }
+            String jsonContent = cleanAndExtractJson(aiResponse);
 
             JsonNode parsed = objectMapper.readTree(jsonContent);
 
@@ -168,10 +165,7 @@ public class OpenRouterService {
         CareerRoadmapResponse.CareerRoadmapResponseBuilder builder = CareerRoadmapResponse.builder();
 
         try {
-            String jsonContent = aiResponse.replaceAll("(?s).*?```(?:json)?\\n?(.*?)\\n?```.*", "$1").trim();
-            if (!jsonContent.startsWith("{")) {
-                jsonContent = aiResponse.trim();
-            }
+            String jsonContent = cleanAndExtractJson(aiResponse);
 
             JsonNode parsed = objectMapper.readTree(jsonContent);
 
@@ -389,7 +383,9 @@ public class OpenRouterService {
 
         List<String> fallbackModels = List.of(
                 apiModel,
-                "google/gemini-2.0-flash-exp:free",
+                "google/gemma-4-31b-it:free",
+                "google/gemma-4-26b-a4b-it:free",
+                "meta-llama/llama-3.3-70b-instruct:free",
                 "meta-llama/llama-3.2-3b-instruct:free"
         );
 
@@ -445,7 +441,7 @@ public class OpenRouterService {
             );
 
             requestBody.put("temperature", 0.7);
-            requestBody.put("max_tokens", 1500);
+            requestBody.put("max_tokens", 1000);
 
             HttpHeaders headers =
                     new HttpHeaders();
@@ -557,13 +553,7 @@ public class OpenRouterService {
                         .rawAiResponse(aiResponse);
 
         try {
-            String jsonContent = aiResponse
-                    .replaceAll("(?s).*?```(?:json)?\\n?(.*?)\\n?```.*", "$1")
-                    .trim();
-
-            if (!jsonContent.startsWith("{")) {
-                jsonContent = aiResponse.trim();
-            }
+            String jsonContent = cleanAndExtractJson(aiResponse);
 
             JsonNode parsed = objectMapper.readTree(jsonContent);
 
@@ -586,5 +576,28 @@ public class OpenRouterService {
         }
 
         return builder.build();
+    }
+
+    private String cleanAndExtractJson(String aiResponse) {
+        if (aiResponse == null) {
+            return "{}";
+        }
+        String jsonContent = aiResponse.replaceAll("(?s).*?```(?:json)?\\n?(.*?)\\n?```.*", "$1").trim();
+        if (!jsonContent.startsWith("{") && !jsonContent.startsWith("[")) {
+            int start = aiResponse.indexOf('{');
+            int end = aiResponse.lastIndexOf('}');
+            if (start != -1 && end != -1 && start < end) {
+                jsonContent = aiResponse.substring(start, end + 1).trim();
+            } else {
+                start = aiResponse.indexOf('[');
+                end = aiResponse.lastIndexOf(']');
+                if (start != -1 && end != -1 && start < end) {
+                    jsonContent = aiResponse.substring(start, end + 1).trim();
+                } else {
+                    jsonContent = aiResponse.trim();
+                }
+            }
+        }
+        return jsonContent;
     }
 }

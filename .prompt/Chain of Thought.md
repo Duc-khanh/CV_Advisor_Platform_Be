@@ -1,5 +1,5 @@
 # Quy trình Suy luận Phân tích CV & Dự án (Chain of Thought)
-
+    
 Khi đánh giá CV hoặc các dự án/kinh nghiệm trong CV, hãy thực hiện theo các bước sau:
 
 1. **Trích xuất thông tin chính**
