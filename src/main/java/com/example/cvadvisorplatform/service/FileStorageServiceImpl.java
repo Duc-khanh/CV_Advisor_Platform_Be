@@ -47,4 +47,32 @@ public class FileStorageServiceImpl implements FileStorageService {
             throw new RuntimeException("Upload ảnh lên bộ lưu trữ cục bộ thất bại", e);
         }
     }
+
+    @Override
+    public String storeArticleImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
+        // 1. Nếu có Cloudinary, sử dụng Cloudinary làm bộ lưu trữ đám mây
+        if (cloudinaryService.isConfigured()) {
+            return cloudinaryService.uploadFile(file, "cv_platform/articles");
+        }
+
+        // 2. Chế độ dự phòng Local Fallback
+        try {
+            Path targetDir = Paths.get(uploadDir, "articles");
+            Files.createDirectories(targetDir);
+
+            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            Path filePath = targetDir.resolve(fileName);
+
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            return "/uploads/articles/" + fileName;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Upload ảnh bài viết lên bộ lưu trữ cục bộ thất bại", e);
+        }
+    }
 }

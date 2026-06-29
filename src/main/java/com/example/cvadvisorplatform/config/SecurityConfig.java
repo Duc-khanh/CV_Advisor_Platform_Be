@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/uploads/**").permitAll()
+                        .requestMatchers("/error").permitAll()
 
                         .requestMatchers("/api/user/**").hasRole("USER")
                         .requestMatchers("/api/hr/**").hasRole("HR")

@@ -29,6 +29,11 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final JobRepository jobRepository;
     private final PasswordEncoder passwordEncoder;
     private final JobApplicationRepository jobApplicationRepository;
+    private final ArticleRepository articleRepository;
+    private final ArticleCommentRepository articleCommentRepository;
+    private final ArticleLikeRepository articleLikeRepository;
+    private final ArticleBookmarkRepository articleBookmarkRepository;
+    private final ArticleRatingRepository articleRatingRepository;
 
     @org.springframework.beans.factory.annotation.Value("${file.upload-dir:uploads}")
     private String uploadDir;
@@ -71,7 +76,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 "https://techcombank.com", "hr@techcombank.com.vn", "1800588822");
 
         // 4. SEED USERS
-        seedUser("Quản Trị Viên", "admin@example.com", "password123", adminRole, null);
+        User admin = seedUser("Quản Trị Viên", "admin@example.com", "password123", adminRole, null);
         User candidate = seedUser("Nguyễn Văn A", "candidate@example.com", "password123", userRole, null);
         User hrFpt = seedUser("Trần Thị B", "hr@fpt.com", "password123", hrRole, fpt);
         User hrVng = seedUser("Phạm Văn C", "hr@vng.com", "password123", hrRole, vng);
@@ -146,6 +151,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
 
         seedJobApplications(candidate);
+        seedArticles(admin);
         log.info("Database Seeder completed successfully!");
     }
 
@@ -302,7 +308,6 @@ public class DatabaseSeeder implements CommandLineRunner {
                 contentStream.newLineAtOffset(0, -25);
                 contentStream.showText("Position: Senior Java Backend Engineer");
                 contentStream.newLineAtOffset(0, -30);
-                contentStream.showText("SUMMARY: 5+ years of experience in Java Backend development.");
                 contentStream.newLineAtOffset(0, -20);
                 contentStream.showText("SKILLS: Java, Spring Boot, MySQL, Hibernate, Microservices, Git, Redis.");
                 contentStream.newLineAtOffset(0, -30);
@@ -319,6 +324,95 @@ public class DatabaseSeeder implements CommandLineRunner {
             log.info("Created mock CV PDF file at: {}", targetPath.toAbsolutePath());
         } catch (Exception e) {
             log.error("Failed to create mock PDF", e);
+        }
+    }
+
+    private void seedArticles(User admin) {
+        if (articleRepository.count() > 0) {
+            boolean hasOldSeeds = articleRepository.findAll().stream()
+                .anyMatch(a -> "Java".equals(a.getCategory()) || "React".equals(a.getCategory()) || a.getTitle().contains("IT"));
+            if (hasOldSeeds) {
+                log.info("Deleting old IT-specific seed articles and related interactions...");
+                articleCommentRepository.deleteAll();
+                articleLikeRepository.deleteAll();
+                articleBookmarkRepository.deleteAll();
+                articleRatingRepository.deleteAll();
+                articleRepository.deleteAll();
+            }
+        }
+
+        if (articleRepository.count() == 0) {
+            log.info("Seeding handbook articles...");
+
+            Article art1 = new Article();
+            art1.setTitle("Bí quyết viết CV chuyên nghiệp chinh phục mọi nhà tuyển dụng");
+            art1.setDescription("CV là tấm vé đầu tiên giúp bạn tiếp cận công việc mơ ước. Khám phá ngay cách cấu trúc CV rõ ràng, trình bày kinh nghiệm ấn tượng và tránh những lỗi cơ bản.");
+            art1.setContent("# Bí quyết viết CV chuyên nghiệp chinh phục mọi nhà tuyển dụng\n\nMột chiếc CV ấn tượng sẽ giúp bạn nổi bật giữa hàng trăm ứng viên. Hãy cùng điểm qua các quy tắc vàng để thiết kế CV chuẩn chuyên nghiệp.\n\n## 1. Cấu trúc thông tin khoa học\n- **Thông tin liên hệ**: Tên, Số điện thoại, Email chuyên nghiệp, liên kết LinkedIn (nếu có).\n- **Mục tiêu nghề nghiệp**: Tóm tắt ngắn gọn từ 2-3 câu về định hướng bản thân và giá trị có thể mang lại cho công ty.\n- **Kinh nghiệm làm việc**: Liệt kê theo thứ tự thời gian đảo ngược (mới nhất ở trên). Hãy tập trung vào các kết quả đạt được bằng những con số cụ thể.\n- **Học vấn & Chứng chỉ**: Các bằng cấp chính quy và chứng chỉ chuyên môn liên quan trực tiếp đến công việc đang ứng tuyển.\n\n## 2. Làm nổi bật các kỹ năng cốt lõi\n- Chia rõ kỹ năng chuyên môn (Hard Skills) và kỹ năng mềm (Soft Skills).\n- Chỉ liệt kê những kỹ năng thực sự liên quan đến mô tả công việc (Job Description) của nhà tuyển dụng.\n\n## 3. Trình bày sạch sẽ, chuyên nghiệp\n- Sử dụng font chữ dễ đọc (Arial, Times New Roman, Calibri), cỡ chữ 11-12.\n- Giới hạn độ dài CV trong khoảng 1-2 trang.\n- Luôn lưu và gửi file ở định dạng PDF.");
+            art1.setCategory("Viết CV");
+            art1.setImageUrl("https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=800&h=500&fit=crop");
+            art1.setReadTime("8 phút đọc");
+            art1.setViewsCount(1250);
+            art1.setLikesCount(120);
+            art1.setPinned(true);
+            art1.setStatus("PUBLISHED");
+            art1.setAuthor(admin);
+            articleRepository.save(art1);
+
+            Article art2 = new Article();
+            art2.setTitle("Top 10 câu hỏi phỏng vấn phổ biến nhất và cách trả lời thông minh");
+            art2.setDescription("Chuẩn bị câu trả lời cho các câu hỏi phỏng vấn kinh điển như: Giới thiệu bản thân, Điểm mạnh - Điểm yếu, hay Tại sao chúng tôi nên tuyển dụng bạn.");
+            art2.setContent("# Top 10 câu hỏi phỏng vấn phổ biến nhất\n\nĐi phỏng vấn không chỉ là buổi kiểm tra kiến thức, mà còn là cơ hội để bạn chứng minh sự phù hợp với văn hóa doanh nghiệp. Dưới đây là cách trả lời thông minh cho các câu hỏi thường gặp.\n\n## 1. Hãy giới thiệu bản thân bạn?\n- **Sai lầm**: Kể quá chi tiết về sở thích cá nhân hoặc lịch sử gia đình.\n- **Cách trả lời tốt**: Áp dụng công thức Hiện tại - Quá khứ - Tương lai. Tóm tắt ngắn gọn công việc hiện tại, các dấu mốc nổi bật trước đó và lý do bạn ứng tuyển vào vị trí này.\n\n## 2. Điểm yếu lớn nhất của bạn là gì?\n- **Sai lầm**: Trả lời 'Tôi không có điểm yếu nào' hoặc 'Tôi là người quá hoàn hảo'.\n- **Cách trả lời tốt**: Nêu một điểm yếu thật sự nhưng đi kèm với giải pháp hoặc nỗ lực bạn đang thực hiện để cải thiện nó. Ví dụ: 'Tôi từng gặp khó khăn khi quản lý thời gian, nhưng hiện tại tôi đã sử dụng các ứng dụng như Trello để lập kế hoạch chi tiết hơn.'\n\n## 3. Tại sao chúng tôi nên tuyển dụng bạn?\n- **Cách trả lời tốt**: Đối chiếu trực tiếp năng lực và kinh nghiệm của bạn với các yêu cầu cốt lõi trong bảng mô tả công việc, đồng thời khẳng định sự hào hứng với tầm nhìn của công ty.");
+            art2.setCategory("Phỏng vấn");
+            art2.setImageUrl("https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=500&fit=crop");
+            art2.setReadTime("5 phút đọc");
+            art2.setViewsCount(960);
+            art2.setLikesCount(85);
+            art2.setPinned(false);
+            art2.setStatus("PUBLISHED");
+            art2.setAuthor(admin);
+            articleRepository.save(art2);
+
+            Article art3 = new Article();
+            art3.setTitle("Chiến thuật tìm việc hiệu quả trong thời đại công nghệ số");
+            art3.setDescription("Làm sao để tiếp cận các cơ hội việc làm ẩn, xây dựng mạng lưới quan hệ và tối ưu hồ sơ tìm việc trực tuyến để các nhà tuyển dụng chủ động săn đón bạn.");
+            art3.setContent("# Chiến thuật tìm việc hiệu quả\n\nTìm việc là một quá trình đòi hỏi sự kiên nhẫn và chiến thuật rõ ràng. Dưới đây là các phương pháp giúp bạn gia tăng cơ hội thành công.\n\n## 1. Tận dụng các nền tảng tuyển dụng trực tuyến\n- Cập nhật hồ sơ thường xuyên trên các website tuyển dụng uy tín.\n- Sử dụng các bộ lọc vị trí địa lý, mức lương, và ngành nghề để tìm đúng công việc mong muốn.\n\n## 2. Xây dựng thương hiệu cá nhân trên mạng xã hội nghề nghiệp\n- Tối ưu hóa hồ sơ trực tuyến của bạn với một bức ảnh đại diện chuyên nghiệp, tóm tắt kinh nghiệm đầy đủ và tiêu đề thu hút.\n- Kết nối với những chuyên gia, nhà tuyển dụng trong ngành để học hỏi và nắm bắt cơ hội.\n\n## 3. Theo dõi sát sao và gửi thư cảm ơn\n- Sau khi nộp hồ sơ hoặc phỏng vấn, hãy chủ động gửi email cảm ơn nhà tuyển dụng. Điều này thể hiện sự chuyên nghiệp và mong muốn gắn bó lâu dài của bạn.");
+            art3.setCategory("Tìm việc");
+            art3.setImageUrl("https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&h=500&fit=crop");
+            art3.setReadTime("6 phút đọc");
+            art3.setViewsCount(740);
+            art3.setLikesCount(64);
+            art3.setPinned(false);
+            art3.setStatus("PUBLISHED");
+            art3.setAuthor(admin);
+            articleRepository.save(art3);
+
+            Article art4 = new Article();
+            art4.setTitle("Bí quyết đàm phán lương hiệu quả khi đi phỏng vấn");
+            art4.setDescription("Thương lượng lương luôn là bước nhạy cảm nhất. Làm sao để đàm phán mức thu nhập xứng đáng với năng lực mà không làm mất lòng nhà tuyển dụng?");
+            art4.setContent("# Bí quyết đàm phán lương hiệu quả\n\nĐàm phán lương là quyền lợi chính đáng của mọi ứng viên. Hãy chuẩn bị kỹ càng để có một thỏa thuận thu nhập tương xứng nhất.\n\n## 1. Khảo sát mức lương thị trường\n- Hãy nghiên cứu kỹ mức thu nhập trung bình của ngành nghề và cấp bậc tương ứng trước buổi đàm phán.\n- Không nên đưa ra một con số quá cao so với mặt bằng chung, trừ khi bạn có năng lực vượt trội.\n\n## 2. Tập trung vào giá trị đóng góp\n- Khi đề cập đến mức lương, hãy nêu rõ lý do tại sao bạn xứng đáng với con số đó bằng cách liên kết với các thành tựu hoặc khả năng giải quyết vấn đề của doanh nghiệp.\n\n## 3. Thương lượng cả gói phúc lợi\n- Nếu công ty không thể đáp ứng mức lương cứng mong muốn, bạn có thể đề xuất các phúc lợi khác như: chế độ bảo hiểm nâng cao, trợ cấp đi lại, tiền thưởng hiệu suất, hoặc số ngày phép năm.");
+            art4.setCategory("Thương lượng lương");
+            art4.setImageUrl("https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=500&fit=crop");
+            art4.setReadTime("4 phút đọc");
+            art4.setViewsCount(1430);
+            art4.setLikesCount(156);
+            art4.setPinned(false);
+            art4.setStatus("PUBLISHED");
+            art4.setAuthor(admin);
+            articleRepository.save(art4);
+
+            Article art5 = new Article();
+            art5.setTitle("Phát triển kỹ năng mềm - Chìa khóa thăng tiến sự nghiệp");
+            art5.setDescription("Kỹ năng chuyên môn giúp bạn có việc làm, nhưng kỹ năng mềm mới giúp bạn tiến xa. Khám phá các kỹ năng mềm quan trọng nhất nơi công sở.");
+            art5.setContent("# Kỹ năng mềm: Chìa khóa thăng tiến sự nghiệp\n\nBên cạnh chuyên môn vững vàng, các kỹ năng tương tác và xử lý tình huống đóng vai trò quyết định đến sự thành bại trong công việc.\n\n## 1. Kỹ năng giao tiếp hiệu quả\n- Lắng nghe chủ động là yếu tố then chốt. Hãy hiểu rõ thông điệp trước khi phản hồi.\n- Trình bày thông tin rõ ràng, súc tích và mạch lạc cả bằng văn bản lẫn lời nói.\n\n## 2. Kỹ năng làm việc nhóm\n- Tôn trọng ý kiến khác biệt và chủ động phối hợp với các thành viên khác để đạt mục tiêu chung.\n- Giải quyết xung đột nội bộ một cách xây dựng và chuyên nghiệp.\n\n## 3. Kỹ năng quản lý thời gian\n- Sử dụng nguyên tắc Eisenhower (Quan trọng và Khẩn cấp) để sắp xếp thứ tự ưu tiên cho công việc hàng ngày.\n- Tránh trì hoãn bằng cách chia nhỏ các tác vụ phức tạp.");
+            art5.setCategory("Kỹ năng");
+            art5.setImageUrl("https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&h=500&fit=crop");
+            art5.setReadTime("5 phút đọc");
+            art5.setViewsCount(1180);
+            art5.setLikesCount(98);
+            art5.setPinned(false);
+            art5.setStatus("PUBLISHED");
+            art5.setAuthor(admin);
+            articleRepository.save(art5);
         }
     }
 }
