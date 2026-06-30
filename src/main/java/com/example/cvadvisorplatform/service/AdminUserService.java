@@ -4,8 +4,10 @@ package com.example.cvadvisorplatform.service;
 import com.example.cvadvisorplatform.dto.AdminUserCreateRequest;
 import com.example.cvadvisorplatform.dto.AdminUserResponse;
 import com.example.cvadvisorplatform.dto.AdminUserUpdateRequest;
+import com.example.cvadvisorplatform.model.Company;
 import com.example.cvadvisorplatform.model.Role;
 import com.example.cvadvisorplatform.model.User;
+import com.example.cvadvisorplatform.repository.CompanyRepository;
 import com.example.cvadvisorplatform.repository.RoleRepository;
 import com.example.cvadvisorplatform.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class AdminUserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
+    private final CompanyRepository companyRepository;
 
     @org.springframework.beans.factory.annotation.Value("${file.upload-dir:uploads}")
     private String uploadDir;
@@ -58,6 +61,16 @@ public class AdminUserService {
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole(role);
+        
+        if (req.getCompanyId() != null) {
+            Company company = companyRepository.findById(req.getCompanyId())
+                    .orElseThrow(() -> new RuntimeException("Company not found"));
+            user.setCompany(company);
+        }
+
+        if ("HR".equals(role.getRoleName())) {
+            user.setHrApprovalStatus("APPROVED");
+        }
 
         if (avatar != null && !avatar.isEmpty()) {
             user.setAvatar(saveAvatar(avatar));
@@ -81,8 +94,26 @@ public class AdminUserService {
         if (req.getEmail() != null)
             user.setEmail(req.getEmail());
 
-        if (req.getRole() != null)
-            user.setRole(getRole(req.getRole()));
+        if (req.getRole() != null) {
+            Role role = getRole(req.getRole());
+            user.setRole(role);
+            if ("HR".equals(role.getRoleName()) && user.getHrApprovalStatus() == null) {
+                user.setHrApprovalStatus("APPROVED");
+            }
+            if (!"HR".equals(role.getRoleName())) {
+                user.setCompany(null);
+            }
+        }
+
+        if (req.getCompanyId() != null) {
+            Company company = companyRepository.findById(req.getCompanyId())
+                    .orElseThrow(() -> new RuntimeException("Company not found"));
+            user.setCompany(company);
+        }
+
+        if (req.getPassword() != null && !req.getPassword().trim().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(req.getPassword()));
+        }
 
         if (avatar != null && !avatar.isEmpty()) {
             user.setAvatar(saveAvatar(avatar));
@@ -169,6 +200,7 @@ public class AdminUserService {
         dto.setHrApprovalStatus(user.getHrApprovalStatus());
         if (user.getCompany() != null) {
             dto.setCompanyName(user.getCompany().getCompanyName());
+            dto.setCompanyId(user.getCompany().getCompanyId());
         }
         return dto;
     }

@@ -38,4 +38,9 @@ public class PublicCompanyController {
         Long userId = (principal != null) ? principal.getUser().getUserId() : null;
         return publicJobService.getActiveJobsByCompanyId(id, userId);
     }
+
+    @GetMapping
+    public List<CompanyPublicResponse> getAllCompanies() {
+        return publicCompanyService.getAllCompanies();
+    }
 }

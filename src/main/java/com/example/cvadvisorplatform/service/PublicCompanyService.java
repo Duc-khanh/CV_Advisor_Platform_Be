@@ -65,4 +65,10 @@ public class PublicCompanyService {
         
         return dto;
     }
+
+    public List<CompanyPublicResponse> getAllCompanies() {
+        return companyRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
 }
