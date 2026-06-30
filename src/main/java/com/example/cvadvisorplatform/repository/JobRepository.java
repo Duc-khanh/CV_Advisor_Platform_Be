@@ -15,6 +15,10 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     /* ===== HR ===== */
     List<Job> findByCompanyCompanyId(Long companyId);
 
+    long countByCompanyCompanyIdAndActiveTrue(Long companyId);
+
+    List<Job> findByCompanyCompanyIdAndActiveTrueOrderByCreatedAtDesc(Long companyId);
+
     Optional<Job> findByJobIdAndCompanyCompanyId(Long jobId, Long companyId);
 
     List<Job> findByCompanyCompanyIdAndTitleContainingIgnoreCase(
@@ -30,13 +34,13 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     );
 
     /* ===== PUBLIC (USER) ===== */
-    List<Job> findByActiveTrue();
+    List<Job> findByActiveTrueOrderByCreatedAtDesc();
 
-    List<Job> findByActiveTrueAndTitleContainingIgnoreCase(String keyword);
+    List<Job> findByActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(String keyword);
 
-    List<Job> findByActiveTrueAndLocationContainingIgnoreCase(String location);
+    List<Job> findByActiveTrueAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(String location);
 
-    List<Job> findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(
+    List<Job> findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(
             String keyword,
             String location
     );

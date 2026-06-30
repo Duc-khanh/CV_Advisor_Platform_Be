@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -50,10 +53,23 @@ public class GeminiService {
     }
 
     private String buildPrompt(String cvContent, String jobDescription) {
+        String systemPrompt = readFile("SYSTEM_PROMPT.md");
+        String chainOfThought = readFile(".prompt/Chain of Thought.md");
 
-        return """
-                Bạn là chuyên gia HR tuyển dụng.
+        StringBuilder basePrompt = new StringBuilder();
 
+        if (!systemPrompt.isEmpty()) {
+            basePrompt.append(systemPrompt).append("\n\n");
+        } else {
+            basePrompt.append("Bạn là chuyên gia HR tuyển dụng.\n\n");
+        }
+
+        if (!chainOfThought.isEmpty()) {
+            basePrompt.append("### QUY TRÌNH PHÂN TÍCH (Chain of Thought):\n")
+                    .append(chainOfThought).append("\n\n");
+        }
+
+        basePrompt.append("""
                 Hãy đánh giá CV dựa trên Job Description.
 
                 =========================
@@ -73,8 +89,17 @@ public class GeminiService {
                 4. Kỹ năng còn thiếu
                 5. Gợi ý cải thiện CV
                 6. Chấm điểm trên thang 100
-                """
-                .formatted(jobDescription, cvContent);
+                """.formatted(jobDescription, cvContent));
+
+        return basePrompt.toString();
+    }
+
+    private String readFile(String filePath) {
+        try {
+            return new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private String callGeminiApi(String prompt) {

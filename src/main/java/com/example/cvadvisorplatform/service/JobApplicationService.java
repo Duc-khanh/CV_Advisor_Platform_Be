@@ -36,6 +36,7 @@ public class JobApplicationService {
     private final JobApplicationRepository repository;
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
+    private final MailService mailService;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
@@ -89,6 +90,14 @@ public class JobApplicationService {
         app.setFileSize(cv.getSize());
 
         repository.save(app);
+
+        // Gửi email xác nhận (chạy ngầm)
+        mailService.sendApplicationConfirmation(
+                user.getEmail(),
+                user.getFullName(),
+                job.getTitle(),
+                job.getCompany().getCompanyName()
+        );
     }
 
     // USER APPLICATIONS
