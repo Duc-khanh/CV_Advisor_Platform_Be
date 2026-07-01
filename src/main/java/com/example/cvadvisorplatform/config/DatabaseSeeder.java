@@ -17,7 +17,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 
-@Component
+//@Component
 @RequiredArgsConstructor
 @Slf4j
 public class DatabaseSeeder implements CommandLineRunner {
