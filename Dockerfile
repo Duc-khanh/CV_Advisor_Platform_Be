@@ -2,6 +2,7 @@
 FROM gradle:8.5-jdk17 AS build
 COPY --chown=gradle:gradle . /home/app
 WORKDIR /home/app
+RUN chmod +x ./gradlew
 RUN ./gradlew clean build -x test
 
 # Bước 2: Dùng Eclipse Temurin (JDK 17 Alpines) siêu nhẹ và cực kỳ ổn định
