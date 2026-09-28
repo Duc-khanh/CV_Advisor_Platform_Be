@@ -2,17 +2,18 @@ package com.example.cvadvisorplatform.dto;
 
 import lombok.Getter;
 import lombok.Setter;
+import jakarta.validation.constraints.*;
 
 @Getter
 @Setter
 public class RegisterHrRequest {
-    private String fullName;
-    private String email;
-    private String password;
+    @NotBlank @Size(max = 120) private String fullName;
+    @NotBlank @Email @Size(max = 255) private String email;
+    @NotBlank @Size(min = 8, max = 72) private String password;
     
     // Company Information
-    private String companyName;
-    private String industryName;
+    @NotBlank @Size(max = 200) private String companyName;
+    @NotBlank @Size(max = 120) private String industryName;
     private String address;
     private String description;
 }

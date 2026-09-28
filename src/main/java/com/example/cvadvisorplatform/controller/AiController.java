@@ -5,6 +5,7 @@ import com.example.cvadvisorplatform.dto.AiCvEvaluationResponse;
 import com.example.cvadvisorplatform.dto.CareerRoadmapResponse;
 import com.example.cvadvisorplatform.service.OpenRouterService;
 import com.example.cvadvisorplatform.service.PdfTextExtractorService;
+import com.example.cvadvisorplatform.service.FileValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,12 +15,12 @@ import com.example.cvadvisorplatform.dto.AiCandidateFitResponse;
 
 @RestController
 @RequestMapping("/api/v1/ai")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class AiController {
 
     private final OpenRouterService openRouterService;
     private final PdfTextExtractorService pdfTextExtractorService;
+    private final FileValidationService fileValidationService;
 
     @PostMapping(
             value = "/evaluate-cv",
@@ -33,12 +34,9 @@ public class AiController {
             String jobDescription
 
     ) throws Exception {
-
+        fileValidationService.validateCv(cvFile, true);
         String cvContent =
                 pdfTextExtractorService.extractText(cvFile);
-
-        System.out.println("===== CV TEXT =====");
-        System.out.println(cvContent);
 
         AiCvEvaluationRequest request =
                 new AiCvEvaluationRequest();
@@ -62,7 +60,7 @@ public class AiController {
             @RequestParam(value = "targetRole", required = false, defaultValue = "") String targetRole,
             @RequestParam(value = "desiredRoadmap", required = false, defaultValue = "") String desiredRoadmap
     ) throws Exception {
-
+        fileValidationService.validateCv(cvFile, true);
         String cvContent = pdfTextExtractorService.extractText(cvFile);
 
         CareerRoadmapResponse response =

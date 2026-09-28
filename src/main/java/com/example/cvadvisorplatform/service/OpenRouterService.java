@@ -4,6 +4,8 @@ import com.example.cvadvisorplatform.dto.AiCandidateFitResponse;
 import com.example.cvadvisorplatform.dto.AiCvEvaluationRequest;
 import com.example.cvadvisorplatform.dto.AiCvEvaluationResponse;
 import com.example.cvadvisorplatform.dto.CareerRoadmapResponse;
+import com.example.cvadvisorplatform.exception.AiProviderException;
+import com.example.cvadvisorplatform.model.AiFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +20,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @Slf4j
@@ -37,15 +41,19 @@ public class OpenRouterService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final AiQuotaService quotaService;
+    private final SystemSettingService systemSettingService;
 
-    public OpenRouterService(RestTemplateBuilder builder) {
+    public OpenRouterService(RestTemplateBuilder builder, AiQuotaService quotaService, SystemSettingService systemSettingService) {
 
         this.restTemplate = builder
-                .connectTimeout(Duration.ofSeconds(60))
-                .readTimeout(Duration.ofSeconds(60))
+                .connectTimeout(Duration.ofSeconds(30))
+                .readTimeout(Duration.ofSeconds(120))
                 .build();
 
         this.objectMapper = new ObjectMapper();
+        this.quotaService = quotaService;
+        this.systemSettingService = systemSettingService;
     }
 
     public AiCvEvaluationResponse evaluateCv(
@@ -59,7 +67,7 @@ public class OpenRouterService {
                 request.getJobDescription()
         );
 
-        String aiResponse = callOpenRouterApi(prompt);
+        String aiResponse = callOpenRouterApi(prompt, 240, AiFeature.CV_EVALUATION);
 
         AiCvEvaluationResponse.AiCvEvaluationResponseBuilder builder = AiCvEvaluationResponse.builder()
                 .rawAiResponse(aiResponse);
@@ -84,16 +92,7 @@ public class OpenRouterService {
             parsed.path("missingSkills").forEach(n -> missingSkills.add(n.asText()));
             builder.missingSkills(missingSkills);
 
-            java.util.List<java.util.Map<String, String>> recommendedJobs = new java.util.ArrayList<>();
-            parsed.path("recommendedJobs").forEach(n -> {
-                java.util.Map<String, String> job = new java.util.HashMap<>();
-                job.put("title", n.path("title").asText(""));
-                job.put("companyName", n.path("companyName").asText(""));
-                job.put("location", n.path("location").asText(""));
-                job.put("salaryRange", n.path("salaryRange").asText(""));
-                recommendedJobs.add(job);
-            });
-            builder.recommendedJobs(recommendedJobs);
+            builder.recommendedJobs(java.util.List.of());
 
         } catch (Exception e) {
             log.warn("Không thể parse AI response thành JSON. Nguyên nhân: {}", e.getMessage());
@@ -160,7 +159,7 @@ public class OpenRouterService {
             }
             """.formatted(cvContent, targetRole, desiredRoadmap);
 
-        String aiResponse = callOpenRouterApi(prompt);
+        String aiResponse = callOpenRouterApi(prompt, 1000, AiFeature.CAREER_ROADMAP);
 
         CareerRoadmapResponse.CareerRoadmapResponseBuilder builder = CareerRoadmapResponse.builder();
 
@@ -228,9 +227,9 @@ public class OpenRouterService {
             String cvContent,
             String jobDescription
     ) {
-        String systemPrompt = readFile("SYSTEM_PROMPT.md");
-        String chainOfThought = readFile(".prompt/Chain of Thought.md");
-        String skills = readFile(".agents/skills/cv-specialist/SKILL.md");
+        String systemPrompt    = com.example.cvadvisorplatform.util.PromptLoader.load("system_prompt.md");
+        String chainOfThought  = com.example.cvadvisorplatform.util.PromptLoader.load("chain_of_thought.md");
+        String skills          = com.example.cvadvisorplatform.util.PromptLoader.load("skills.md");
 
         StringBuilder basePrompt = new StringBuilder();
 
@@ -314,11 +313,9 @@ public class OpenRouterService {
               "summary": "Tóm tắt ngắn gọn, có nêu ngành nghề phù hợp của CV",
               "strengths": ["Điểm 1", "Điểm 2"],
               "weaknesses": ["Điểm 1", "Điểm 2"],
-              "missingSkills": ["Kỹ năng 1"],
-              "recommendedJobs": [
-                {"title": "Tên job phù hợp với ngành nghề của CV", "companyName": "Loại công ty", "location": "Remote", "salaryRange": "Thỏa thuận"}
-              ]
+              "missingSkills": ["Kỹ năng 1"]
             }
+            Giữ JSON dưới 220 token: summary tối đa 2 câu và mỗi danh sách tối đa 2 mục ngắn gọn.
             """.formatted(cvContent));
 
         return basePrompt.toString();
@@ -370,56 +367,191 @@ public class OpenRouterService {
             """.formatted(jobDescription, cvContent);
     }
 
-    private String readFile(String filePath) {
-        try {
-            return new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            log.error("Không thể đọc file prompt: {}. Lỗi: {}", filePath, e.getMessage());
-            return "";
+    public String rewriteCvText(String text, String tone, String cvContext) {
+        if (text == null || text.isBlank()) {
+            throw new RuntimeException("Nội dung cần chỉnh sửa không được để trống");
         }
+
+        String normalizedTone = tone == null ? "concise" : tone.trim().toLowerCase();
+        String instruction = switch (normalizedTone) {
+            case "star" -> "Viết lại theo phương pháp STAR, nhấn mạnh tình huống, nhiệm vụ, hành động và kết quả. Không bịa số liệu.";
+            case "polish" -> "Trau chuốt thành văn phong chuyên nghiệp, rõ ràng và phù hợp với CV.";
+            default -> "Viết lại ngắn gọn, súc tích, ưu tiên động từ hành động và giữ nguyên ý nghĩa.";
+        };
+
+        String context = cvContext == null || cvContext.isBlank()
+                ? "Không có ngữ cảnh CV bổ sung."
+                : cvContext.substring(0, Math.min(cvContext.length(), 12000));
+
+        String prompt = """
+                Bạn là chuyên gia viết CV bằng tiếng Việt.
+                %s
+                Chỉ trả về đoạn văn đã viết lại, không giải thích, không thêm markdown và không tự bịa thông tin.
+
+                NGỮ CẢNH CV:
+                %s
+
+                ĐOẠN CẦN VIẾT LẠI:
+                %s
+                """.formatted(instruction, context, text);
+
+        String result = callOpenRouterApi(prompt, 1000, AiFeature.CV_REWRITE).trim();
+        if (result.startsWith("```") && result.endsWith("```")) {
+            result = result.replaceFirst("^```(?:text)?\\s*", "")
+                    .replaceFirst("\\s*```$", "")
+                    .trim();
+        }
+        return result;
     }
 
-    private String callOpenRouterApi(String prompt) {
+    public String generateCareerAssistantResponse(String prompt) {
+        if (prompt == null || prompt.isBlank()) {
+            throw new RuntimeException("Prompt Career Assistant không được để trống");
+        }
+        return callOpenRouterApi(prompt, 800, AiFeature.CAREER_ASSISTANT);
+    }
 
-        List<String> fallbackModels = List.of(
-                apiModel,
-                "google/gemma-4-31b-it:free",
-                "google/gemma-4-26b-a4b-it:free",
-                "meta-llama/llama-3.3-70b-instruct:free",
-                "meta-llama/llama-3.2-3b-instruct:free"
-        );
+    public List<String> buildModelSequence() {
+        String strategy = systemSettingService != null ? systemSettingService.getAiStrategy() : "free_first";
+        String primaryFree = systemSettingService != null ? systemSettingService.getPrimaryFreeModel() : "meta-llama/llama-3.3-70b-instruct:free";
+        String fallback = systemSettingService != null ? systemSettingService.getFallbackModel() : "google/gemini-1.5-flash";
+
+        List<String> models = new ArrayList<>();
+        if ("gemini_only".equalsIgnoreCase(strategy)) {
+            models.add(fallback != null && !fallback.isBlank() ? fallback : "google/gemini-1.5-flash");
+            models.add("google/gemini-2.0-flash-lite");
+        } else if ("free_only".equalsIgnoreCase(strategy)) {
+            if (primaryFree != null && !primaryFree.isBlank()) models.add(primaryFree);
+            models.add("google/gemma-2-9b-it:free");
+            models.add("deepseek/deepseek-r1:free");
+            models.add("qwen/qwen-2.5-72b-instruct:free");
+            models.add("meta-llama/llama-3.3-70b-instruct:free");
+        } else {
+            // "free_first" (default): Prioritize free models, then fallback to Gemini!
+            if (primaryFree != null && !primaryFree.isBlank()) models.add(primaryFree);
+            models.add("google/gemma-2-9b-it:free");
+            models.add("deepseek/deepseek-r1:free");
+            models.add(fallback != null && !fallback.isBlank() ? fallback : "google/gemini-1.5-flash");
+            models.add("google/gemini-2.0-flash-lite");
+        }
+        return models.stream().filter(Objects::nonNull).distinct().toList();
+    }
+
+    public Map<String, Object> testModelDirectly(String model) {
+        long startTime = System.currentTimeMillis();
+        Map<String, Object> result = new HashMap<>();
+        String targetModel = (model != null && !model.isBlank())
+                ? model
+                : (systemSettingService != null ? systemSettingService.getPrimaryFreeModel() : "meta-llama/llama-3.3-70b-instruct:free");
+        try {
+            String testPrompt = "Xin chào! Bạn là mô hình AI nào? Hãy trả lời trong 1 câu ngắn gọn bằng tiếng Việt rằng hệ thống đã kết nối thành công.";
+            double temp = systemSettingService != null ? systemSettingService.getTemperature() : 0.4;
+            ProviderResult providerResult = executeRequest(targetModel, testPrompt, 150, temp);
+            long latency = System.currentTimeMillis() - startTime;
+            result.put("success", true);
+            result.put("latencyMs", latency);
+            result.put("message", "Kết nối mô hình " + targetModel + " thành công!");
+            result.put("sampleResponse", providerResult.content());
+            result.put("model", targetModel);
+        } catch (Exception e) {
+            long latency = System.currentTimeMillis() - startTime;
+            result.put("success", false);
+            result.put("latencyMs", latency);
+            result.put("message", "Lỗi kết nối mô hình " + targetModel + ": " + e.getMessage());
+            result.put("model", targetModel);
+        }
+        return result;
+    }
+
+    private String callOpenRouterApi(String prompt, int maxTokens, AiFeature feature) {
+        int estimatedInput = Math.max(1, (prompt.length() + 3) / 4);
+        AiQuotaService.Reservation reservation = quotaService.reserve(feature, estimatedInput, maxTokens);
+        List<String> fallbackModels = buildModelSequence();
+        double temp = systemSettingService != null ? systemSettingService.getTemperature() : 0.4;
+
+        RuntimeException lastError = null;
 
         for (String model : fallbackModels) {
-
             try {
+                log.info("Calling AI model [Strategy: {}]: {}", systemSettingService != null ? systemSettingService.getAiStrategy() : "free_first", model);
+                ProviderResult result = executeRequest(model, prompt, maxTokens, temp);
 
-                log.info("Calling OpenRouter model: {}", model);
-
-                String result =
-                        executeRequest(model, prompt);
-
-                if (result != null &&
-                        !result.isBlank()) {
-
-                    return result;
+                if (result.content() != null && !result.content().isBlank()) {
+                    if (reservation != null) {
+                        quotaService.complete(reservation, model, result.inputTokens(), result.outputTokens());
+                    }
+                    return result.content();
                 }
 
-            } catch (Exception e) {
-
-                log.error(
-                        "Model failed: {}",
-                        model,
-                        e
-                );
+                lastError = new RuntimeException("Model " + model + " trả về nội dung rỗng");
+            } catch (RuntimeException e) {
+                lastError = e;
+                log.error("AI model {} failed: {}", model, e.getMessage());
+                if (e instanceof NonRetryableAiException) break;
             }
         }
 
-        throw new RuntimeException("Không thể kết nối AI (Hết quota, rate limit hoặc Model không tồn tại).");
+        String reason = lastError != null && lastError.getMessage() != null
+                ? lastError.getMessage()
+                : "Không nhận được phản hồi từ nhà cung cấp";
+        String normalizedReason = reason.toLowerCase();
+        boolean quotaExceeded = normalizedReason.contains("more credits")
+                || normalizedReason.contains("openrouter_credits")
+                || normalizedReason.contains("402");
+        String message = quotaExceeded
+                ? "AI đã hết hạn mức sử dụng. Vui lòng nạp thêm credit OpenRouter rồi thử lại."
+                : "AI tạm thời không phản hồi. Vui lòng thử lại sau.";
+        if (reservation != null) {
+            quotaService.fail(reservation, quotaExceeded ? "AI_PROVIDER_QUOTA" : "AI_PROVIDER_ERROR");
+        }
+        throw new AiProviderException(message, lastError);
+    }
+    private String resolveApiKey() {
+        String projectKeyName = "CVADVISOR_OPENROUTER_API_KEY";
+        java.nio.file.Path directory = java.nio.file.Paths.get(System.getProperty("user.dir")).toAbsolutePath();
+
+        for (int level = 0; level < 4 && directory != null; level++) {
+            java.nio.file.Path envFile = directory.resolve(".env");
+            if (java.nio.file.Files.isRegularFile(envFile)) {
+                try {
+                    for (String line : java.nio.file.Files.readAllLines(envFile, java.nio.charset.StandardCharsets.UTF_8)) {
+                        String trimmed = line.trim();
+                        if (trimmed.startsWith(projectKeyName + "=")) {
+                            String value = trimmed.substring(trimmed.indexOf('=') + 1).trim();
+                            if ((value.startsWith("\"") && value.endsWith("\""))
+                                    || (value.startsWith("'") && value.endsWith("'"))) {
+                                value = value.substring(1, value.length() - 1).trim();
+                            }
+                            if (!value.isBlank()) {
+                                return value;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Không thể đọc OpenRouter key từ {}: {}", envFile, e.getMessage());
+                }
+            }
+            directory = directory.getParent();
+        }
+
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new RuntimeException("Chưa cấu hình OpenRouter API key");
+        }
+        return apiKey.trim();
+    }
+    private ProviderResult executeRequest(
+            String model,
+            String prompt,
+            int maxTokens
+    ) {
+        return executeRequest(model, prompt, maxTokens, 0.4);
     }
 
-    private String executeRequest(
+    private ProviderResult executeRequest(
             String model,
-            String prompt
+            String prompt,
+            int maxTokens,
+            double temperature
     ) {
 
         try {
@@ -440,8 +572,8 @@ public class OpenRouterService {
                     List.of(message)
             );
 
-            requestBody.put("temperature", 0.7);
-            requestBody.put("max_tokens", 1000);
+            requestBody.put("temperature", temperature > 0 ? temperature : 0.4);
+            requestBody.put("max_tokens", maxTokens);
 
             HttpHeaders headers =
                     new HttpHeaders();
@@ -450,7 +582,7 @@ public class OpenRouterService {
                     MediaType.APPLICATION_JSON
             );
 
-            headers.setBearerAuth(apiKey);
+            headers.setBearerAuth(resolveApiKey());
 
             headers.set(
                     "HTTP-Referer",
@@ -479,8 +611,7 @@ public class OpenRouterService {
             String responseBody =
                     response.getBody();
 
-            log.info("OpenRouter Response: {}",
-                    responseBody);
+            log.info("OpenRouter request completed successfully for model: {}", model);
 
             if (responseBody == null ||
                     responseBody.isBlank()) {
@@ -493,32 +624,33 @@ public class OpenRouterService {
             JsonNode rootNode =
                     objectMapper.readTree(responseBody);
 
-            JsonNode contentNode =
-                    rootNode
-                            .path("choices")
-                            .get(0)
-                            .path("message")
-                            .path("content");
+            JsonNode choices = rootNode.path("choices");
+            if (!choices.isArray() || choices.isEmpty()) {
+                throw new RuntimeException("Không tìm thấy choices trong phản hồi AI");
+            }
 
-            if (contentNode.isMissingNode()) {
+            JsonNode contentNode = choices.path(0).path("message").path("content");
+
+            if (contentNode.isMissingNode() || contentNode.isNull() || contentNode.asText().isBlank()) {
 
                 throw new RuntimeException(
                         "Không tìm thấy content"
                 );
             }
 
-            return contentNode.asText();
+            JsonNode usage = rootNode.path("usage");
+            int inputTokens = usage.path("prompt_tokens").asInt(Math.max(1, (prompt.length() + 3) / 4));
+            int outputTokens = usage.path("completion_tokens").asInt(Math.max(1, (contentNode.asText().length() + 3) / 4));
+            return new ProviderResult(contentNode.asText(), inputTokens, outputTokens);
 
         } catch (HttpClientErrorException e) {
-
-            log.error(
-                    "OpenRouter API Error: {}",
-                    e.getResponseBodyAsString()
-            );
-
-            throw new RuntimeException(
-                    e.getResponseBodyAsString()
-            );
+            int status = e.getStatusCode().value();
+            log.error("OpenRouter API Error: status={}", status);
+            if (status == HttpStatus.TOO_MANY_REQUESTS.value()
+                    || status == HttpStatus.REQUEST_TIMEOUT.value()) {
+                throw new RuntimeException("OpenRouter HTTP " + status, e);
+            }
+            throw new NonRetryableAiException("OpenRouter HTTP " + status, e);
 
         } catch (Exception e) {
 
@@ -531,6 +663,10 @@ public class OpenRouterService {
                     e.getMessage()
             );
         }
+    }
+    private record ProviderResult(String content, int inputTokens, int outputTokens) { }
+    private static class NonRetryableAiException extends RuntimeException {
+        private NonRetryableAiException(String message, Throwable cause) { super(message, cause); }
     }
     public AiCandidateFitResponse evaluateCandidateFit(
             String cvContent,
@@ -546,7 +682,7 @@ public class OpenRouterService {
 
         String prompt = buildCandidateFitPrompt(cvContent, jobDescription);
 
-        String aiResponse = callOpenRouterApi(prompt);
+        String aiResponse = callOpenRouterApi(prompt, 1000, AiFeature.CANDIDATE_FIT);
 
         AiCandidateFitResponse.AiCandidateFitResponseBuilder builder =
                 AiCandidateFitResponse.builder()

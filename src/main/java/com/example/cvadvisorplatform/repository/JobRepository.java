@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 public interface JobRepository extends JpaRepository<Job, Long> {
 
     /* ===== HR ===== */
@@ -34,15 +37,16 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     );
 
     /* ===== PUBLIC (USER) ===== */
-    List<Job> findByActiveTrueOrderByCreatedAtDesc();
+    Page<Job> findByActiveTrueOrderByCreatedAtDesc(Pageable pageable);
 
-    List<Job> findByActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(String keyword);
+    Page<Job> findByActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(String keyword, Pageable pageable);
 
-    List<Job> findByActiveTrueAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(String location);
+    Page<Job> findByActiveTrueAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(String location, Pageable pageable);
 
-    List<Job> findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(
+    Page<Job> findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(
             String keyword,
-            String location
+            String location,
+            Pageable pageable
     );
 
     /* ===== UPDATE VIEW COUNT ATOMICALLY ===== */

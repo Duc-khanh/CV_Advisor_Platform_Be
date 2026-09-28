@@ -254,7 +254,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void seedJobApplications(User candidate) {
-        if (jobApplicationRepository.findAllByUser_UserIdOrderByIdDesc(candidate.getUserId()).isEmpty()) {
+        if (jobApplicationRepository.findAllByUserWithJobAndCompany(candidate.getUserId()).isEmpty()) {
             log.info("Seeding default job applications for testing...");
 
             List<Job> allJobs = jobRepository.findAll();

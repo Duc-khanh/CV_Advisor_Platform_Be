@@ -9,27 +9,18 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class CurrentUserService {
-
-    @Value("${file.upload-dir:uploads}")
-    private String uploadDir;
 
     private final CloudinaryService cloudinaryService;
     private final UserRepository userRepository;
@@ -165,26 +156,6 @@ public class CurrentUserService {
         if (file == null || file.isEmpty()) {
             return null;
         }
-
-        // 1. Sử dụng Cloudinary nếu có cấu hình
-        if (cloudinaryService.isConfigured()) {
-            return cloudinaryService.uploadFile(file, "cv_platform/avatars");
-        }
-
-        // 2. Chế độ dự phòng Local Fallback
-        try {
-            Path targetDir = Paths.get(uploadDir, "avatars");
-            Files.createDirectories(targetDir);
-
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path filePath = targetDir.resolve(fileName);
-
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            return "/uploads/avatars/" + fileName;
-
-        } catch (Exception e) {
-            throw new RuntimeException("Upload avatar lên bộ lưu trữ cục bộ thất bại", e);
-        }
+        return cloudinaryService.uploadFile(file, "cv_platform/avatars");
     }
 }

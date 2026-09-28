@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Service
@@ -17,35 +19,33 @@ public class PublicJobService {
     private final JobRepository jobRepository;
     private final JobFavoriteRepository jobFavoriteRepository;
 
-    public List<JobPublicResponse> getPublicJobs(String keyword, String location, Long userId) {
+    public Page<JobPublicResponse> getPublicJobs(String keyword, String location, Long userId, Pageable pageable) {
 
-        List<Job> jobs;
+        Page<Job> jobs;
 
         if (keyword != null && !keyword.isBlank()
                 && location != null && !location.isBlank()) {
 
             jobs = jobRepository
                     .findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(
-                            keyword, location
+                            keyword, location, pageable
                     );
 
         } else if (keyword != null && !keyword.isBlank()) {
 
             jobs = jobRepository
-                    .findByActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(keyword);
+                    .findByActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(keyword, pageable);
 
         } else if (location != null && !location.isBlank()) {
 
             jobs = jobRepository
-                    .findByActiveTrueAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(location);
+                    .findByActiveTrueAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(location, pageable);
 
         } else {
-            jobs = jobRepository.findByActiveTrueOrderByCreatedAtDesc();
+            jobs = jobRepository.findByActiveTrueOrderByCreatedAtDesc(pageable);
         }
 
-        return jobs.stream()
-                .map(job -> mapToPublicResponse(job, userId))
-                .toList();
+        return jobs.map(job -> mapToPublicResponse(job, userId));
     }
 
     private JobPublicResponse mapToPublicResponse(Job job, Long userId) {

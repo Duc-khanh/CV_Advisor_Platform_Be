@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @RestController
@@ -18,13 +21,16 @@ public class PublicJobController {
     private final PublicJobService publicJobService;
 
     @GetMapping
-    public List<JobPublicResponse> getPublicJobs(
+    public Page<JobPublicResponse> getPublicJobs(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String location,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         Long userId = (principal != null) ? principal.getUser().getUserId() : null;
-        return publicJobService.getPublicJobs(keyword, location, userId);
+        Pageable pageable = PageRequest.of(page, size);
+        return publicJobService.getPublicJobs(keyword, location, userId, pageable);
     }
 
     @GetMapping("/{id}")

@@ -1,0 +1,63 @@
+{
+  "ai" : {
+    "strategy" : "free_first",
+    "primaryFreeModel" : "meta-llama/llama-3.3-70b-instruct:free",
+    "fallbackModel" : "google/gemini-1.5-flash",
+    "temperature" : 0.4,
+    "topP" : 0.9,
+    "maxTokens" : 4096,
+    "safetyLevel" : "BLOCK_LOW",
+    "autoFallbackOnQuota" : true,
+    "availableFreeModels" : [ {
+      "name" : "Meta LLaMA 3.3 70B (Miễn phí - Thông minh)",
+      "provider" : "Meta / OpenRouter",
+      "id" : "meta-llama/llama-3.3-70b-instruct:free"
+    }, {
+      "name" : "Google Gemma 2 9B (Miễn phí - Siêu tốc)",
+      "provider" : "Google / OpenRouter",
+      "id" : "google/gemma-2-9b-it:free"
+    }, {
+      "name" : "DeepSeek R1 Reasoning (Miễn phí - Suy luận sâu)",
+      "provider" : "DeepSeek / OpenRouter",
+      "id" : "deepseek/deepseek-r1:free"
+    }, {
+      "name" : "Qwen 2.5 72B (Miễn phí - Đa ngôn ngữ)",
+      "provider" : "Alibaba / OpenRouter",
+      "id" : "qwen/qwen-2.5-72b-instruct:free"
+    }, {
+      "name" : "Mistral 7B Instruct (Miễn phí)",
+      "provider" : "Mistral AI",
+      "id" : "mistralai/mistral-7b-instruct:free"
+    } ]
+  },
+  "storage" : {
+    "maxCvFileSizeMb" : 10,
+    "maxAvatarFileSizeMb" : 3,
+    "allowedExtensions" : [ ".pdf", ".docx", ".doc" ],
+    "storagePath" : "uploads/cv",
+    "autoCleanupDays" : 90
+  },
+  "security" : {
+    "jwtExpirationHours" : 24,
+    "passwordMinLength" : 8,
+    "requireSpecialChar" : false,
+    "maxLoginAttempts" : 5,
+    "lockoutDurationMinutes" : 15
+  },
+  "email" : {
+    "smtpHost" : "smtp.gmail.com",
+    "smtpPort" : 587,
+    "senderName" : "CV Advisor Platform",
+    "senderEmail" : "no-reply@cvadvisor.vn",
+    "notifyCandidateOnApply" : true,
+    "notifyHrOnNewCandidate" : true,
+    "notifyOnAccountAction" : true
+  },
+  "general" : {
+    "platformName" : "CV Advisor Platform",
+    "supportEmail" : "support@cvadvisor.vn",
+    "hotline" : "1900 6868",
+    "maintenanceMode" : true,
+    "maintenanceMessage" : "Hệ thống đang tiến hành nâng cấp hạ tầng định kỳ. Xin quý khách vui lòng quay lại sau ít phút!"
+  }
+}
