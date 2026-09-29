@@ -5,5 +5,6 @@ public enum AiFeature {
     CAREER_ROADMAP,
     CV_REWRITE,
     CAREER_ASSISTANT,
-    CANDIDATE_FIT
+    CANDIDATE_FIT,
+    PROFILE_PARSE
 }

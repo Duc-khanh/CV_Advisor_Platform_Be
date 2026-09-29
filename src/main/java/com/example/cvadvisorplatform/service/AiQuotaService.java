@@ -131,6 +131,47 @@ public class AiQuotaService {
         return toResponse(getOrCreate(currentUser()));
     }
 
+    @Transactional
+    public AiUsageResponse upgradePlan(String planCode) {
+        User user = currentUser();
+        return activatePlanForUser(user, planCode);
+    }
+
+    @Transactional
+    public AiUsageResponse activatePlanForUser(User user, String planCode) {
+        if (planCode == null || planCode.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_PLAN", "Mã gói dịch vụ AI không được để trống.");
+        }
+        if ("FREE".equalsIgnoreCase(planCode.trim())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "CANNOT_DOWNGRADE_FREE", "Gói Free là gói mặc định, không thể nâng cấp về gói này.");
+        }
+
+        AiPlan targetPlan = planRepository.findByCodeIgnoreCase(planCode.trim())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "PLAN_NOT_FOUND", "Không tìm thấy gói AI: " + planCode));
+
+        if (!targetPlan.isActive()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "PLAN_INACTIVE", "Gói AI hiện đang tạm ngưng phục vụ.");
+        }
+
+        UserSubscription sub = getOrCreate(user);
+        if (sub.getPlan() != null) {
+            if (sub.getPlan().getCode().equalsIgnoreCase(targetPlan.getCode())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "ALREADY_ACTIVE", "Bạn đang sử dụng gói " + targetPlan.getName() + " rồi.");
+            }
+            if (targetPlan.getMonthlyPrice().compareTo(sub.getPlan().getMonthlyPrice()) <= 0) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "DOWNGRADE_NOT_ALLOWED", "Bạn chỉ có thể nâng cấp lên gói có thứ hạng cao hơn gói hiện tại.");
+            }
+        }
+
+        sub.setPlan(targetPlan);
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        startNewPeriod(sub);
+        subscriptionRepository.save(sub);
+
+        log.info("Người dùng ID={} ({}) đã kích hoạt thành công gói AI: {}", user.getUserId(), user.getEmail(), targetPlan.getCode());
+        return toResponse(sub);
+    }
+
     public AiUsageResponse toResponse(UserSubscription sub) {
         AiPlan plan = sub.getPlan();
         int bonus = sub.getBonusCredits() != null ? sub.getBonusCredits() : 0;

@@ -69,8 +69,10 @@ public interface JobApplicationRepository
     @Query("""
         SELECT ja
         FROM JobApplication ja
+        LEFT JOIN FETCH ja.user u
+        LEFT JOIN FETCH ja.job j
         WHERE ja.id = :applicationId
-          AND ja.job.company.companyId = :companyId
+          AND j.company.companyId = :companyId
     """)
     Optional<JobApplication> findByIdAndCompanyId(
             @Param("applicationId") Long applicationId,

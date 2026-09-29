@@ -4,6 +4,10 @@ import com.example.cvadvisorplatform.dto.AiCandidateFitResponse;
 import com.example.cvadvisorplatform.dto.AppliedCandidateResponse;
 import com.example.cvadvisorplatform.model.JobApplicationEvaluation;
 import com.example.cvadvisorplatform.repository.JobApplicationEvaluationRepository;
+import com.example.cvadvisorplatform.dto.InterviewSummaryResponse;
+import com.example.cvadvisorplatform.model.Interview;
+import com.example.cvadvisorplatform.repository.InterviewRepository;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import com.example.cvadvisorplatform.dto.AppliedJobResponse;
@@ -50,6 +54,8 @@ public class JobApplicationService {
     private final FileValidationService fileValidationService;
     private final JobApplicationEvaluationRepository evaluationRepository;
     private final JobApplicationEvaluationService evaluationService;
+    private final InterviewRepository interviewRepository;
+
 
     // APPLY JOB
     @Transactional
@@ -193,6 +199,19 @@ public class JobApplicationService {
                     repository.findAllByUserWithJobAndCompany(userId);
         }
 
+        List<Long> appIds = applications.stream().map(JobApplication::getId).toList();
+        Map<Long, Interview> latestInterviewMap = new HashMap<>();
+        if (!appIds.isEmpty()) {
+            List<Interview> interviews = interviewRepository.findByApplication_IdIn(appIds);
+            for (Interview iv : interviews) {
+                Long appId = iv.getApplication().getId();
+                Interview existing = latestInterviewMap.get(appId);
+                if (existing == null || (iv.getStartTime() != null && existing.getStartTime() != null && iv.getStartTime().isAfter(existing.getStartTime()))) {
+                    latestInterviewMap.put(appId, iv);
+                }
+            }
+        }
+
         return applications.stream().map(app -> {
 
             AppliedJobResponse res =
@@ -220,6 +239,23 @@ public class JobApplicationService {
                 jobRes.setSalaryRange(job.getSalaryRange());
 
                 res.setJob(jobRes);
+            }
+
+            Interview iv = latestInterviewMap.get(app.getId());
+            if (iv != null) {
+                InterviewSummaryResponse ivDto = InterviewSummaryResponse.builder()
+                        .id(iv.getId())
+                        .roundName(iv.getRoundName())
+                        .interviewType(iv.getInterviewType())
+                        .locationOrLink(iv.getLocationOrLink())
+                        .startTime(iv.getStartTime())
+                        .endTime(iv.getEndTime())
+                        .interviewerName(iv.getInterviewerName())
+                        .interviewerEmail(iv.getInterviewerEmail())
+                        .notes(iv.getNotes())
+                        .status(iv.getStatus())
+                        .build();
+                res.setInterview(ivDto);
             }
 
             return res;
@@ -353,7 +389,30 @@ public class JobApplicationService {
         application.setStatus(normalizedStatus);
         repository.save(application);
         log.info("HR công ty #{} đã cập nhật trạng thái đơn ứng tuyển #{} sang {}", companyId, applicationId, normalizedStatus);
+
+        // Gửi email thông báo cho ứng viên nếu trúng tuyển hoặc từ chối
+        try {
+            if (application.getUser() != null && application.getUser().getEmail() != null) {
+                String candidateEmail = application.getUser().getEmail();
+                String candidateName = application.getUser().getFullName() != null ? application.getUser().getFullName() : "Ứng viên";
+                String jobTitle = application.getJob() != null ? application.getJob().getTitle() : "Vị trí ứng tuyển";
+                String compName = (application.getJob() != null && application.getJob().getCompany() != null)
+                        ? application.getJob().getCompany().getCompanyName()
+                        : "Công ty";
+
+                mailService.sendApplicationStatusUpdate(
+                        candidateEmail,
+                        candidateName,
+                        jobTitle,
+                        compName,
+                        normalizedStatus
+                );
+            }
+        } catch (Exception e) {
+            log.error("Không thể gửi email cập nhật trạng thái ứng tuyển: {}", e.getMessage());
+        }
     }
+
 
     public JobApplication getApplicationByIdAndCompanyId(Long applicationId, Long companyId) {
         return repository.findByIdAndCompanyId(applicationId, companyId)

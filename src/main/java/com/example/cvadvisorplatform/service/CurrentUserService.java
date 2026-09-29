@@ -47,7 +47,15 @@ public class CurrentUserService {
         }
 
         if (data.getEmail() != null && !data.getEmail().isBlank()) {
-            freshUser.setEmail(data.getEmail());
+            String newEmail = data.getEmail().trim().toLowerCase();
+            // Chỉ cập nhật email nếu là email của chính user hoặc chưa bị dùng bởi user khác
+            boolean emailBelongsToSelf = newEmail.equalsIgnoreCase(freshUser.getEmail());
+            boolean emailTaken = !emailBelongsToSelf && userRepository.existsByEmail(newEmail);
+            if (!emailTaken) {
+                freshUser.setEmail(newEmail);
+            } else {
+                log.warn("Bỏ qua cập nhật email '{}' vì đã tồn tại trong hệ thống.", newEmail);
+            }
         }
 
         if (avatar != null && !avatar.isEmpty()) {

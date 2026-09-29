@@ -33,6 +33,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/payments/**").permitAll()
 
                         .requestMatchers("/api/v1/ai/**").hasRole("USER")
 

@@ -18,4 +18,9 @@ public class AiUsageController {
     public AiUsageResponse currentUsage() { return quotaService.getCurrentUsage(); }
     @GetMapping("/plans")
     public List<AiPlan> availablePlans() { return planRepository.findByActiveTrueOrderByMonthlyPriceAsc(); }
+    @PostMapping("/upgrade")
+    public AiUsageResponse upgradePlan(@RequestBody java.util.Map<String, String> body) {
+        String planCode = body != null ? body.get("planCode") : null;
+        return quotaService.upgradePlan(planCode);
+    }
 }

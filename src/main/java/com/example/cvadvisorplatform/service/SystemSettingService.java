@@ -71,11 +71,11 @@ public class SystemSettingService {
     }
 
     public String getPrimaryFreeModel() {
-        return (String) getAiSettings().getOrDefault("primaryFreeModel", "meta-llama/llama-3.3-70b-instruct:free");
+        return (String) getAiSettings().getOrDefault("primaryFreeModel", "openrouter/free");
     }
 
     public String getFallbackModel() {
-        return (String) getAiSettings().getOrDefault("fallbackModel", "google/gemini-1.5-flash");
+        return (String) getAiSettings().getOrDefault("fallbackModel", "google/gemini-2.5-flash-lite");
     }
 
     public double getTemperature() {
@@ -113,17 +113,19 @@ public class SystemSettingService {
     private Map<String, Object> getDefaultSettings() {
         Map<String, Object> defaults = new LinkedHashMap<>();
 
-        // 1. AI Settings (Hỗ trợ Free Models kết hợp Fallback Gemini)
+        // 1. AI Settings (Hỗ trợ Free Models kết hợp Fallback Gemini & Llama)
         Map<String, Object> ai = new LinkedHashMap<>();
         ai.put("strategy", "free_first"); // "free_first", "gemini_only", "free_only"
-        ai.put("primaryFreeModel", "meta-llama/llama-3.3-70b-instruct:free");
-        ai.put("fallbackModel", "google/gemini-1.5-flash");
+        ai.put("primaryFreeModel", "openrouter/free");
+        ai.put("fallbackModel", "google/gemini-2.5-flash-lite");
         ai.put("availableFreeModels", List.of(
-                Map.of("id", "meta-llama/llama-3.3-70b-instruct:free", "name", "Meta LLaMA 3.3 70B (Miễn phí - Thông minh)", "provider", "Meta / OpenRouter"),
-                Map.of("id", "google/gemma-2-9b-it:free", "name", "Google Gemma 2 9B (Miễn phí - Siêu tốc)", "provider", "Google / OpenRouter"),
-                Map.of("id", "deepseek/deepseek-r1:free", "name", "DeepSeek R1 Reasoning (Miễn phí - Suy luận sâu)", "provider", "DeepSeek / OpenRouter"),
-                Map.of("id", "qwen/qwen-2.5-72b-instruct:free", "name", "Qwen 2.5 72B (Miễn phí - Đa ngôn ngữ)", "provider", "Alibaba / OpenRouter"),
-                Map.of("id", "mistralai/mistral-7b-instruct:free", "name", "Mistral 7B Instruct (Miễn phí)", "provider", "Mistral AI")
+                Map.of("id", "openrouter/free", "name", "OpenRouter Free Router (Tự động chọn mô hình miễn phí khả dụng)", "provider", "OpenRouter"),
+                Map.of("id", "google/gemma-4-31b-it:free", "name", "Google Gemma 4 31B (Miễn phí - Thông minh)", "provider", "Google / OpenRouter"),
+                Map.of("id", "liquid/lfm-2.5-2.6b:free", "name", "Liquid LFM 2.5 (Miễn phí - Siêu tốc)", "provider", "LiquidAI / OpenRouter"),
+                Map.of("id", "google/gemini-2.5-flash-lite", "name", "Google Gemini 2.5 Flash Lite (Siêu nhanh, khuyên dùng)", "provider", "Google / OpenRouter"),
+                Map.of("id", "google/gemini-2.5-flash", "name", "Google Gemini 2.5 Flash (Chính xác cao, chuyên sâu)", "provider", "Google / OpenRouter"),
+                Map.of("id", "meta-llama/llama-3.1-8b-instruct", "name", "Meta LLaMA 3.1 8B (Tiết kiệm, ổn định)", "provider", "Meta / OpenRouter"),
+                Map.of("id", "meta-llama/llama-3.3-70b-instruct", "name", "Meta LLaMA 3.3 70B (Mạnh mẽ, toàn diện)", "provider", "Meta / OpenRouter")
         ));
         ai.put("temperature", 0.4);
         ai.put("topP", 0.9);
@@ -169,6 +171,14 @@ public class SystemSettingService {
         general.put("maintenanceMode", false);
         general.put("maintenanceMessage", "Hệ thống đang tiến hành nâng cấp hạ tầng định kỳ. Xin quý khách vui lòng quay lại sau ít phút!");
         defaults.put("general", general);
+
+        // 6. Payment Settings (VietQR)
+        Map<String, Object> payment = new LinkedHashMap<>();
+        payment.put("bankId", "MB");
+        payment.put("bankName", "Ngân hàng TMCP Quân Đội (MB Bank)");
+        payment.put("accountNo", "686825062005");
+        payment.put("accountName", "NGUYEN DUC KHANH");
+        defaults.put("payment", payment);
 
         return defaults;
     }

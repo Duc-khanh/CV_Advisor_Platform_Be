@@ -1,33 +1,41 @@
 {
   "ai" : {
     "strategy" : "free_first",
-    "primaryFreeModel" : "meta-llama/llama-3.3-70b-instruct:free",
-    "fallbackModel" : "google/gemini-1.5-flash",
+    "primaryFreeModel" : "openrouter/free",
+    "fallbackModel" : "google/gemini-2.5-flash-lite",
     "temperature" : 0.4,
     "topP" : 0.9,
     "maxTokens" : 4096,
     "safetyLevel" : "BLOCK_LOW",
     "autoFallbackOnQuota" : true,
     "availableFreeModels" : [ {
-      "name" : "Meta LLaMA 3.3 70B (Miễn phí - Thông minh)",
-      "provider" : "Meta / OpenRouter",
-      "id" : "meta-llama/llama-3.3-70b-instruct:free"
+      "name" : "OpenRouter Free Router (Tự động chọn mô hình miễn phí khả dụng)",
+      "provider" : "OpenRouter",
+      "id" : "openrouter/free"
     }, {
-      "name" : "Google Gemma 2 9B (Miễn phí - Siêu tốc)",
+      "name" : "Google Gemma 4 31B (Miễn phí - Thông minh)",
       "provider" : "Google / OpenRouter",
-      "id" : "google/gemma-2-9b-it:free"
+      "id" : "google/gemma-4-31b-it:free"
     }, {
-      "name" : "DeepSeek R1 Reasoning (Miễn phí - Suy luận sâu)",
-      "provider" : "DeepSeek / OpenRouter",
-      "id" : "deepseek/deepseek-r1:free"
+      "name" : "Liquid LFM 2.5 (Miễn phí - Siêu tốc)",
+      "provider" : "LiquidAI / OpenRouter",
+      "id" : "liquid/lfm-2.5-2.6b:free"
     }, {
-      "name" : "Qwen 2.5 72B (Miễn phí - Đa ngôn ngữ)",
-      "provider" : "Alibaba / OpenRouter",
-      "id" : "qwen/qwen-2.5-72b-instruct:free"
+      "name" : "Google Gemini 2.5 Flash Lite (Siêu nhanh, khuyên dùng)",
+      "provider" : "Google / OpenRouter",
+      "id" : "google/gemini-2.5-flash-lite"
     }, {
-      "name" : "Mistral 7B Instruct (Miễn phí)",
-      "provider" : "Mistral AI",
-      "id" : "mistralai/mistral-7b-instruct:free"
+      "name" : "Google Gemini 2.5 Flash (Chính xác cao, chuyên sâu)",
+      "provider" : "Google / OpenRouter",
+      "id" : "google/gemini-2.5-flash"
+    }, {
+      "name" : "Meta LLaMA 3.1 8B (Tiết kiệm, ổn định)",
+      "provider" : "Meta / OpenRouter",
+      "id" : "meta-llama/llama-3.1-8b-instruct"
+    }, {
+      "name" : "Meta LLaMA 3.3 70B (Mạnh mẽ, toàn diện)",
+      "provider" : "Meta / OpenRouter",
+      "id" : "meta-llama/llama-3.3-70b-instruct"
     } ]
   },
   "storage" : {

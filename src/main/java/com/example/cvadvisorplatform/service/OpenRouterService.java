@@ -4,6 +4,7 @@ import com.example.cvadvisorplatform.dto.AiCandidateFitResponse;
 import com.example.cvadvisorplatform.dto.AiCvEvaluationRequest;
 import com.example.cvadvisorplatform.dto.AiCvEvaluationResponse;
 import com.example.cvadvisorplatform.dto.CareerRoadmapResponse;
+import com.example.cvadvisorplatform.dto.CurrentUserUpdateRequest;
 import com.example.cvadvisorplatform.exception.AiProviderException;
 import com.example.cvadvisorplatform.model.AiFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -52,6 +53,10 @@ public class OpenRouterService {
                 .build();
 
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+        this.objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+        this.objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_COMMENTS, true);
+        this.objectMapper.configure(com.fasterxml.jackson.core.json.JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature(), true);
         this.quotaService = quotaService;
         this.systemSettingService = systemSettingService;
     }
@@ -413,26 +418,28 @@ public class OpenRouterService {
 
     public List<String> buildModelSequence() {
         String strategy = systemSettingService != null ? systemSettingService.getAiStrategy() : "free_first";
-        String primaryFree = systemSettingService != null ? systemSettingService.getPrimaryFreeModel() : "meta-llama/llama-3.3-70b-instruct:free";
-        String fallback = systemSettingService != null ? systemSettingService.getFallbackModel() : "google/gemini-1.5-flash";
+        String primaryFree = systemSettingService != null ? systemSettingService.getPrimaryFreeModel() : "openrouter/free";
+        String fallback = systemSettingService != null ? systemSettingService.getFallbackModel() : "google/gemini-2.5-flash-lite";
 
         List<String> models = new ArrayList<>();
         if ("gemini_only".equalsIgnoreCase(strategy)) {
-            models.add(fallback != null && !fallback.isBlank() ? fallback : "google/gemini-1.5-flash");
-            models.add("google/gemini-2.0-flash-lite");
+            models.add(fallback != null && !fallback.isBlank() ? fallback : "google/gemini-2.5-flash-lite");
+            models.add("google/gemini-2.5-flash");
+            models.add("google/gemini-3.1-flash-lite");
         } else if ("free_only".equalsIgnoreCase(strategy)) {
             if (primaryFree != null && !primaryFree.isBlank()) models.add(primaryFree);
-            models.add("google/gemma-2-9b-it:free");
-            models.add("deepseek/deepseek-r1:free");
-            models.add("qwen/qwen-2.5-72b-instruct:free");
-            models.add("meta-llama/llama-3.3-70b-instruct:free");
+            models.add("openrouter/free");
+            models.add("google/gemma-4-31b-it:free");
+            models.add("liquid/lfm-2.5-2.6b:free");
         } else {
-            // "free_first" (default): Prioritize free models, then fallback to Gemini!
+            // "free_first" (default): Ưu tiên free, sau đó tự động fallback sang Gemini & Llama
             if (primaryFree != null && !primaryFree.isBlank()) models.add(primaryFree);
-            models.add("google/gemma-2-9b-it:free");
-            models.add("deepseek/deepseek-r1:free");
-            models.add(fallback != null && !fallback.isBlank() ? fallback : "google/gemini-1.5-flash");
-            models.add("google/gemini-2.0-flash-lite");
+            models.add("openrouter/free");
+            models.add("google/gemma-4-31b-it:free");
+            models.add(fallback != null && !fallback.isBlank() ? fallback : "google/gemini-2.5-flash-lite");
+            models.add("google/gemini-2.5-flash");
+            models.add("meta-llama/llama-3.1-8b-instruct");
+            models.add("meta-llama/llama-3.3-70b-instruct");
         }
         return models.stream().filter(Objects::nonNull).distinct().toList();
     }
@@ -442,7 +449,7 @@ public class OpenRouterService {
         Map<String, Object> result = new HashMap<>();
         String targetModel = (model != null && !model.isBlank())
                 ? model
-                : (systemSettingService != null ? systemSettingService.getPrimaryFreeModel() : "meta-llama/llama-3.3-70b-instruct:free");
+                : (systemSettingService != null ? systemSettingService.getPrimaryFreeModel() : "openrouter/free");
         try {
             String testPrompt = "Xin chào! Bạn là mô hình AI nào? Hãy trả lời trong 1 câu ngắn gọn bằng tiếng Việt rằng hệ thống đã kết nối thành công.";
             double temp = systemSettingService != null ? systemSettingService.getTemperature() : 0.4;
@@ -461,6 +468,60 @@ public class OpenRouterService {
             result.put("model", targetModel);
         }
         return result;
+    }
+
+    /**
+     * Gọi AI với JSON mode bật - buộc model trả về JSON hợp lệ.
+     * Dùng cho các tính năng cần cấu trúc JSON chặt chẽ như parse profile.
+     */
+    private String callOpenRouterApiJsonMode(String prompt, int maxTokens, AiFeature feature) {
+        int estimatedInput = Math.max(1, (prompt.length() + 3) / 4);
+        AiQuotaService.Reservation reservation = quotaService.reserve(feature, estimatedInput, maxTokens);
+        List<String> fallbackModels = buildModelSequence();
+        double temp = 0.1; // Low temp for deterministic JSON
+
+        RuntimeException lastError = null;
+
+        for (String model : fallbackModels) {
+            try {
+                log.info("Calling AI model [JSON mode]: {}", model);
+                ProviderResult result = null;
+                try {
+                    result = executeRequest(model, prompt, maxTokens, temp, true);
+                } catch (Exception reqEx) {
+                    log.warn("Model {} does not support json_mode response_format ({}). Retrying without flag...", model, reqEx.getMessage());
+                    result = executeRequest(model, prompt, maxTokens, temp, false);
+                }
+
+                if (result != null && result.content() != null && !result.content().isBlank()) {
+                    String extractedJson = cleanAndExtractJson(result.content());
+                    try {
+                        objectMapper.readTree(extractedJson);
+                        if (reservation != null) {
+                            quotaService.complete(reservation, model, result.inputTokens(), result.outputTokens());
+                        }
+                        return result.content();
+                    } catch (Exception parseEx) {
+                        log.warn("Model {} returned content that cannot be parsed as JSON: {}. Trying next model...", model, parseEx.getMessage());
+                        lastError = new RuntimeException("Model " + model + " returned invalid JSON: " + parseEx.getMessage());
+                    }
+                } else {
+                    lastError = new RuntimeException("Model " + model + " returned empty content");
+                }
+            } catch (RuntimeException e) {
+                lastError = e;
+                log.warn("AI model {} (JSON mode) failed: {}. Trying next model...", model, e.getMessage());
+                if (e instanceof NonRetryableAiException) {
+                    break;
+                }
+            }
+        }
+
+        if (reservation != null) {
+            try { quotaService.fail(reservation, "AI_PROVIDER_ERROR"); } catch (Exception ignored) {}
+        }
+        String reason = lastError != null && lastError.getMessage() != null ? lastError.getMessage() : "Unknown";
+        throw new RuntimeException("AI did not respond after all models. Last error: " + reason, lastError);
     }
 
     private String callOpenRouterApi(String prompt, int maxTokens, AiFeature feature) {
@@ -486,8 +547,11 @@ public class OpenRouterService {
                 lastError = new RuntimeException("Model " + model + " trả về nội dung rỗng");
             } catch (RuntimeException e) {
                 lastError = e;
-                log.error("AI model {} failed: {}", model, e.getMessage());
-                if (e instanceof NonRetryableAiException) break;
+                log.warn("AI model {} thất bại: {}. Đang chuyển tiếp sang model dự phòng tiếp theo...", model, e.getMessage());
+                if (e instanceof NonRetryableAiException) {
+                    log.error("Dừng chuỗi thử model do gặp lỗi toàn cục tài khoản: {}", e.getMessage());
+                    break;
+                }
             }
         }
 
@@ -499,8 +563,8 @@ public class OpenRouterService {
                 || normalizedReason.contains("openrouter_credits")
                 || normalizedReason.contains("402");
         String message = quotaExceeded
-                ? "AI đã hết hạn mức sử dụng. Vui lòng nạp thêm credit OpenRouter rồi thử lại."
-                : "AI tạm thời không phản hồi. Vui lòng thử lại sau.";
+                ? "AI đã hết hạn mức sử dụng (Credit OpenRouter). Vui lòng nạp thêm credit rồi thử lại."
+                : ("AI tạm thời không phản hồi. Chi tiết: " + reason);
         if (reservation != null) {
             quotaService.fail(reservation, quotaExceeded ? "AI_PROVIDER_QUOTA" : "AI_PROVIDER_ERROR");
         }
@@ -544,7 +608,7 @@ public class OpenRouterService {
             String prompt,
             int maxTokens
     ) {
-        return executeRequest(model, prompt, maxTokens, 0.4);
+        return executeRequest(model, prompt, maxTokens, 0.4, false);
     }
 
     private ProviderResult executeRequest(
@@ -552,6 +616,16 @@ public class OpenRouterService {
             String prompt,
             int maxTokens,
             double temperature
+    ) {
+        return executeRequest(model, prompt, maxTokens, temperature, false);
+    }
+
+    private ProviderResult executeRequest(
+            String model,
+            String prompt,
+            int maxTokens,
+            double temperature,
+            boolean jsonMode
     ) {
 
         try {
@@ -574,6 +648,10 @@ public class OpenRouterService {
 
             requestBody.put("temperature", temperature > 0 ? temperature : 0.4);
             requestBody.put("max_tokens", maxTokens);
+            // JSON mode: force model to output valid JSON
+            if (jsonMode) {
+                requestBody.put("response_format", Map.of("type", "json_object"));
+            }
 
             HttpHeaders headers =
                     new HttpHeaders();
@@ -645,25 +723,46 @@ public class OpenRouterService {
 
         } catch (HttpClientErrorException e) {
             int status = e.getStatusCode().value();
-            log.error("OpenRouter API Error: status={}", status);
-            if (status == HttpStatus.TOO_MANY_REQUESTS.value()
-                    || status == HttpStatus.REQUEST_TIMEOUT.value()) {
-                throw new RuntimeException("OpenRouter HTTP " + status, e);
+            String responseBody = e.getResponseBodyAsString();
+            String detailedError = extractErrorMessage(responseBody, status);
+
+            log.error("OpenRouter API Error [Model: {}]: HTTP {} - {}", model, status, detailedError);
+
+            // 401 Unauthorized (sai API key), 402 Payment Required (hết credit) -> Dừng retry toàn cục
+            if (status == HttpStatus.UNAUTHORIZED.value() || status == HttpStatus.PAYMENT_REQUIRED.value()) {
+                throw new NonRetryableAiException("Lỗi tài khoản OpenRouter (HTTP " + status + "): " + detailedError, e);
             }
-            throw new NonRetryableAiException("OpenRouter HTTP " + status, e);
+
+            // 404 (model slug không tồn tại hoặc bị gỡ free), 400 (model ID không hợp lệ), 429 (rate limit), 5xx:
+            // Ném RuntimeException để chuỗi fallback tự động chuyển sang model tiếp theo!
+            throw new RuntimeException("Model " + model + " trả về HTTP " + status + ": " + detailedError, e);
 
         } catch (Exception e) {
 
-            log.error(
-                    "System Error",
-                    e
-            );
+            log.error("Lỗi khi kết nối tới mô hình AI {}: {}", model, e.getMessage(), e);
 
             throw new RuntimeException(
-                    e.getMessage()
+                    "Lỗi kết nối (" + model + "): " + e.getMessage(),
+                    e
             );
         }
     }
+
+    private String extractErrorMessage(String responseBody, int status) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "HTTP status " + status;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(responseBody);
+            String message = root.path("error").path("message").asText();
+            if (message != null && !message.isBlank()) {
+                return message;
+            }
+        } catch (Exception ignored) {
+        }
+        return responseBody;
+    }
+
     private record ProviderResult(String content, int inputTokens, int outputTokens) { }
     private static class NonRetryableAiException extends RuntimeException {
         private NonRetryableAiException(String message, Throwable cause) { super(message, cause); }
@@ -714,26 +813,156 @@ public class OpenRouterService {
         return builder.build();
     }
 
+    public CurrentUserUpdateRequest parseProfileFromCv(String cvContent) {
+        if (cvContent == null || cvContent.isBlank()) {
+            throw new RuntimeException("Nội dung CV trống");
+        }
+
+        // Truncate CV content to avoid exceeding input token limits
+        // ~0.25 tokens per char, limit 12000 tokens => ~48000 chars max
+        String cvTruncated = cvContent.length() > 40000 ? cvContent.substring(0, 40000) : cvContent;
+
+        String prompt = """
+            You are a CV data extraction assistant. Extract candidate information from the CV text and respond ONLY with a valid JSON object.
+
+            REQUIRED JSON FORMAT (use null for missing fields, [] for empty lists):
+            {
+              "fullName": "candidate full name",
+              "headline": "professional title (e.g. Senior Java Developer)",
+              "phone": "phone number or null",
+              "email": "email or null",
+              "location": "city/address or null",
+              "birthday": "dd/MM/yyyy or null",
+              "gender": "Nam or Nu or null",
+              "personalLink": "LinkedIn/GitHub URL or null",
+              "bio": "2-3 sentence professional summary in Vietnamese",
+              "skills": ["skill1", "skill2"],
+              "education": [
+                {"school": "university", "degree": "degree/major", "graduationDate": "year"}
+              ],
+              "experience": [
+                {"title": "position", "company": "company", "startDate": "MM/yyyy", "endDate": "MM/yyyy or null", "description": "responsibilities"}
+              ],
+              "projects": [
+                {"name": "project", "role": "role", "technologies": "tech stack", "description": "description", "link": "URL or null"}
+              ]
+            }
+
+            STRICT RULES:
+            - Output ONLY the JSON object. NO markdown, NO explanation, NO text before or after JSON.
+            - skills MUST be a JSON array of strings.
+            - Do NOT add any extra fields.
+
+            CV TEXT TO PARSE:
+            %s
+            """.formatted(cvTruncated);
+
+        log.info("[parseProfileFromCv] CV length: {} chars, starting AI extraction...", cvTruncated.length());
+
+        String aiResponse = callOpenRouterApiJsonMode(prompt, 2048, AiFeature.PROFILE_PARSE);
+
+        log.info("[parseProfileFromCv] AI response preview: {}",
+                aiResponse != null && aiResponse.length() > 500 ? aiResponse.substring(0, 500) + "..." : aiResponse);
+
+        try {
+            String jsonContent = cleanAndExtractJson(aiResponse);
+            JsonNode root = objectMapper.readTree(jsonContent);
+
+            CurrentUserUpdateRequest request = new CurrentUserUpdateRequest();
+            if (root.hasNonNull("fullName")) request.setFullName(root.get("fullName").asText(""));
+            if (root.hasNonNull("headline")) request.setHeadline(root.get("headline").asText(""));
+            if (root.hasNonNull("phone")) request.setPhone(root.get("phone").asText(""));
+            if (root.hasNonNull("email")) request.setEmail(root.get("email").asText(""));
+            if (root.hasNonNull("location")) request.setLocation(root.get("location").asText(""));
+            if (root.hasNonNull("birthday")) request.setBirthday(root.get("birthday").asText(""));
+            if (root.hasNonNull("gender")) request.setGender(root.get("gender").asText(""));
+            if (root.hasNonNull("personalLink")) request.setPersonalLink(root.get("personalLink").asText(""));
+            if (root.hasNonNull("bio")) request.setBio(root.get("bio").asText(""));
+
+            if (root.has("skills") && root.get("skills").isArray()) {
+                List<String> skills = new ArrayList<>();
+                root.get("skills").forEach(s -> {
+                    String val = s.asText("").trim();
+                    if (!val.isBlank() && !skills.contains(val)) skills.add(val);
+                });
+                request.setSkills(skills);
+            }
+
+            long baseId = System.currentTimeMillis();
+            if (root.has("education") && root.get("education").isArray()) {
+                List<Object> education = new ArrayList<>();
+                int idx = 0;
+                for (JsonNode n : root.get("education")) {
+                    Map<String, Object> edu = new HashMap<>();
+                    edu.put("id", baseId + (++idx));
+                    edu.put("school", n.path("school").asText(""));
+                    edu.put("degree", n.path("degree").asText(""));
+                    edu.put("graduationDate", n.path("graduationDate").asText(""));
+                    education.add(edu);
+                }
+                request.setEducation(education);
+            }
+
+            if (root.has("experience") && root.get("experience").isArray()) {
+                List<Object> experience = new ArrayList<>();
+                int idx = 0;
+                for (JsonNode n : root.get("experience")) {
+                    Map<String, Object> exp = new HashMap<>();
+                    exp.put("id", baseId + 1000 + (++idx));
+                    exp.put("title", n.path("title").asText(""));
+                    exp.put("company", n.path("company").asText(""));
+                    exp.put("startDate", n.path("startDate").asText(""));
+                    exp.put("endDate", n.path("endDate").asText(""));
+                    exp.put("description", n.path("description").asText(""));
+                    experience.add(exp);
+                }
+                request.setExperience(experience);
+            }
+
+            if (root.has("projects") && root.get("projects").isArray()) {
+                List<Object> projects = new ArrayList<>();
+                int idx = 0;
+                for (JsonNode n : root.get("projects")) {
+                    Map<String, Object> proj = new HashMap<>();
+                    proj.put("id", baseId + 2000 + (++idx));
+                    proj.put("name", n.path("name").asText(""));
+                    proj.put("role", n.path("role").asText(""));
+                    proj.put("technologies", n.path("technologies").asText(""));
+                    proj.put("description", n.path("description").asText(""));
+                    proj.put("link", n.path("link").asText(""));
+                    projects.add(proj);
+                }
+                request.setProjects(projects);
+            }
+
+            return request;
+        } catch (Exception e) {
+            log.error("Lỗi parse JSON thông tin hồ sơ từ AI: {}. AI Raw Response: [{}]", e.getMessage(), aiResponse, e);
+            throw new RuntimeException("AI không thể trích xuất cấu trúc hồ sơ hợp lệ từ CV. Vui lòng thử lại.");
+        }
+    }
+
     private String cleanAndExtractJson(String aiResponse) {
-        if (aiResponse == null) {
+        if (aiResponse == null || aiResponse.isBlank()) {
             return "{}";
         }
-        String jsonContent = aiResponse.replaceAll("(?s).*?```(?:json)?\\n?(.*?)\\n?```.*", "$1").trim();
-        if (!jsonContent.startsWith("{") && !jsonContent.startsWith("[")) {
-            int start = aiResponse.indexOf('{');
-            int end = aiResponse.lastIndexOf('}');
-            if (start != -1 && end != -1 && start < end) {
-                jsonContent = aiResponse.substring(start, end + 1).trim();
-            } else {
-                start = aiResponse.indexOf('[');
-                end = aiResponse.lastIndexOf(']');
-                if (start != -1 && end != -1 && start < end) {
-                    jsonContent = aiResponse.substring(start, end + 1).trim();
-                } else {
-                    jsonContent = aiResponse.trim();
-                }
-            }
+        String content = aiResponse.trim();
+        // 1. Try markdown code block
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```").matcher(content);
+        if (matcher.find()) {
+            content = matcher.group(1).trim();
         }
-        return jsonContent;
+        // 2. Extract first {...} or [...] block
+        int firstBrace = content.indexOf('{');
+        int lastBrace = content.lastIndexOf('}');
+        if (firstBrace != -1 && lastBrace > firstBrace) {
+            return content.substring(firstBrace, lastBrace + 1).trim();
+        }
+        int firstBracket = content.indexOf('[');
+        int lastBracket = content.lastIndexOf(']');
+        if (firstBracket != -1 && lastBracket > firstBracket) {
+            return content.substring(firstBracket, lastBracket + 1).trim();
+        }
+        return content;
     }
 }

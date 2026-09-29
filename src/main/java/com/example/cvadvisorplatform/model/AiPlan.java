@@ -24,7 +24,7 @@ public class AiPlan {
     @Column(nullable = false)
     private Integer maxInputTokens = 12_000;
     @Column(nullable = false)
-    private Integer maxOutputTokens = 1_000;
+    private Integer maxOutputTokens = 4_096;
     @Column(nullable = false)
     private Integer requestsPerMinute = 5;
     @Column(nullable = false)
@@ -47,6 +47,7 @@ public class AiPlan {
             case CV_REWRITE -> cvRewriteCredits;
             case CAREER_ASSISTANT -> careerAssistantCredits;
             case CANDIDATE_FIT -> candidateFitCredits;
+            case PROFILE_PARSE -> cvEvaluationCredits; // Same quota as CV_EVALUATION
         };
     }
 }
