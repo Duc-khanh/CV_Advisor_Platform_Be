@@ -20,10 +20,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 @Service
@@ -35,9 +31,6 @@ public class AdminUserService {
     private final PasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
     private final CompanyRepository companyRepository;
-
-    @org.springframework.beans.factory.annotation.Value("${file.upload-dir:uploads}")
-    private String uploadDir;
 
     /* ===== DANH SÁCH ===== */
     public List<AdminUserResponse> getAllUsers() {
@@ -166,26 +159,7 @@ public class AdminUserService {
         if (file == null || file.isEmpty()) {
             return null;
         }
-
-        // 1. Sử dụng Cloudinary nếu có cấu hình
-        if (cloudinaryService.isConfigured()) {
-            return cloudinaryService.uploadFile(file, "cv_platform/avatars");
-        }
-
-        // 2. Chế độ dự phòng Local Fallback
-        try {
-            Path targetDir = Paths.get(uploadDir, "avatars");
-            Files.createDirectories(targetDir);
-
-            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            Path path = targetDir.resolve(fileName);
-
-            Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
-
-            return "/uploads/avatars/" + fileName;
-        } catch (Exception e) {
-            throw new RuntimeException("Upload avatar thất bại: " + e.getMessage(), e);
-        }
+        return cloudinaryService.uploadFile(file, "cv_platform/avatars");
     }
 
     private AdminUserResponse toDto(User user) {

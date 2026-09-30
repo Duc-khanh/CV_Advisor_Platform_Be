@@ -36,6 +36,8 @@ out/
 ### VS Code ###
 .vscode/
 .env
+uploads/
+private-uploads/
 # Backup files
 *~
 *.swp

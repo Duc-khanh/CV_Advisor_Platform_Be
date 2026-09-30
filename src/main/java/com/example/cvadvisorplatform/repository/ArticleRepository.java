@@ -1,6 +1,7 @@
 package com.example.cvadvisorplatform.repository;
 
 import com.example.cvadvisorplatform.model.Article;
+import com.example.cvadvisorplatform.dto.ArticleResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -33,4 +34,32 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     // Group categories with article counts
     @Query("SELECT a.category, COUNT(a) FROM Article a WHERE a.status = 'PUBLISHED' GROUP BY a.category")
     List<Object[]> countArticlesByCategory();
+
+    @Query("""
+        SELECT new com.example.cvadvisorplatform.dto.ArticleResponse(
+            a.articleId,
+            a.title,
+            a.description,
+            a.content,
+            a.category,
+            a.imageUrl,
+            a.readTime,
+            a.viewsCount,
+            a.likesCount,
+            a.status,
+            a.isPinned,
+            a.createdAt,
+            author.fullName,
+            author.avatar,
+            COALESCE(AVG(r.ratingValue), 0.0),
+            COUNT(DISTINCT c.commentId)
+        )
+        FROM Article a
+        LEFT JOIN a.author author
+        LEFT JOIN ArticleComment c ON c.article = a
+        LEFT JOIN ArticleRating r ON r.article = a
+        GROUP BY a.articleId, a.title, a.description, a.content, a.category, a.imageUrl, a.readTime, a.viewsCount, a.likesCount, a.status, a.isPinned, a.createdAt, author.fullName, author.avatar
+        ORDER BY a.createdAt DESC
+    """)
+    List<ArticleResponse> findAllArticlesWithStatsAdmin();
 }

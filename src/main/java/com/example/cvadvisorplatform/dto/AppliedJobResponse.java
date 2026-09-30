@@ -17,4 +17,7 @@ public class AppliedJobResponse {
 
     // Chứa thông tin Job bên trong
     private JobPublicResponse job;
-}
+
+    // Chứa thông tin buổi phỏng vấn (nếu có lịch)
+    private InterviewSummaryResponse interview;
+}

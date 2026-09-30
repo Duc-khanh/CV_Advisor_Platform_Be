@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @Service
@@ -17,35 +19,12 @@ public class PublicJobService {
     private final JobRepository jobRepository;
     private final JobFavoriteRepository jobFavoriteRepository;
 
-    public List<JobPublicResponse> getPublicJobs(String keyword, String location, Long userId) {
+    public Page<JobPublicResponse> getPublicJobs(String keyword, String location, Long userId, Pageable pageable) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        String cleanLocation = (location != null && !location.trim().isEmpty()) ? location.trim() : null;
 
-        List<Job> jobs;
-
-        if (keyword != null && !keyword.isBlank()
-                && location != null && !location.isBlank()) {
-
-            jobs = jobRepository
-                    .findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(
-                            keyword, location
-                    );
-
-        } else if (keyword != null && !keyword.isBlank()) {
-
-            jobs = jobRepository
-                    .findByActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(keyword);
-
-        } else if (location != null && !location.isBlank()) {
-
-            jobs = jobRepository
-                    .findByActiveTrueAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(location);
-
-        } else {
-            jobs = jobRepository.findByActiveTrueOrderByCreatedAtDesc();
-        }
-
-        return jobs.stream()
-                .map(job -> mapToPublicResponse(job, userId))
-                .toList();
+        Page<Job> jobs = jobRepository.searchPublicJobs(cleanKeyword, cleanLocation, pageable);
+        return jobs.map(job -> mapToPublicResponse(job, userId));
     }
 
     private JobPublicResponse mapToPublicResponse(Job job, Long userId) {

@@ -17,7 +17,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 
-@Component
+//@Component
 @RequiredArgsConstructor
 @Slf4j
 public class DatabaseSeeder implements CommandLineRunner {
@@ -254,7 +254,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void seedJobApplications(User candidate) {
-        if (jobApplicationRepository.findAllByUser_UserIdOrderByIdDesc(candidate.getUserId()).isEmpty()) {
+        if (jobApplicationRepository.findAllByUserWithJobAndCompany(candidate.getUserId()).isEmpty()) {
             log.info("Seeding default job applications for testing...");
 
             List<Job> allJobs = jobRepository.findAll();

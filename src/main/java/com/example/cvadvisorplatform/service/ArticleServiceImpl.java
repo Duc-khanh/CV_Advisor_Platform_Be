@@ -47,10 +47,7 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     public List<ArticleResponse> getArticlesAdmin() {
-        List<Article> articles = articleRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
-        return articles.stream()
-                .map(article -> mapToResponse(article, null))
-                .collect(Collectors.toList());
+        return articleRepository.findAllArticlesWithStatsAdmin();
     }
 
     @Override

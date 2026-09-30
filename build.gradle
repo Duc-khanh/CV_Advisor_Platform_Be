@@ -38,6 +38,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     // Thymeleaf + Security
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
@@ -45,6 +46,8 @@ dependencies {
 
     // MySQL
     runtimeOnly 'com.mysql:mysql-connector-j'
+    runtimeOnly 'org.postgresql:postgresql'
+
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -66,9 +69,6 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    implementation 'com.google.api-client:google-api-client:2.2.0'
-    implementation 'com.google.http-client:google-http-client-gson:1.43.3'
 
     implementation 'com.cloudinary:cloudinary-http44:1.39.0'
 
