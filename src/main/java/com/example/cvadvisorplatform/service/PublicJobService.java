@@ -20,31 +20,10 @@ public class PublicJobService {
     private final JobFavoriteRepository jobFavoriteRepository;
 
     public Page<JobPublicResponse> getPublicJobs(String keyword, String location, Long userId, Pageable pageable) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        String cleanLocation = (location != null && !location.trim().isEmpty()) ? location.trim() : null;
 
-        Page<Job> jobs;
-
-        if (keyword != null && !keyword.isBlank()
-                && location != null && !location.isBlank()) {
-
-            jobs = jobRepository
-                    .findByActiveTrueAndTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(
-                            keyword, location, pageable
-                    );
-
-        } else if (keyword != null && !keyword.isBlank()) {
-
-            jobs = jobRepository
-                    .findByActiveTrueAndTitleContainingIgnoreCaseOrderByCreatedAtDesc(keyword, pageable);
-
-        } else if (location != null && !location.isBlank()) {
-
-            jobs = jobRepository
-                    .findByActiveTrueAndLocationContainingIgnoreCaseOrderByCreatedAtDesc(location, pageable);
-
-        } else {
-            jobs = jobRepository.findByActiveTrueOrderByCreatedAtDesc(pageable);
-        }
-
+        Page<Job> jobs = jobRepository.searchPublicJobs(cleanKeyword, cleanLocation, pageable);
         return jobs.map(job -> mapToPublicResponse(job, userId));
     }
 

@@ -60,10 +60,14 @@ public class AuthService {
         Role role = roleRepository.findByRoleName("HR")
                 .orElseThrow(() -> new RuntimeException("Role HR not found"));
 
-        Industry industry = industryRepository.findByIndustryName(request.getIndustryName())
+        String indName = (request.getIndustryName() != null && !request.getIndustryName().isBlank())
+                ? request.getIndustryName().trim()
+                : "Công nghệ thông tin";
+
+        Industry industry = industryRepository.findByIndustryName(indName)
                 .orElseGet(() -> {
                     Industry newIndustry = new Industry();
-                    newIndustry.setIndustryName(request.getIndustryName());
+                    newIndustry.setIndustryName(indName);
                     return industryRepository.save(newIndustry);
                 });
 

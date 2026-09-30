@@ -48,6 +48,7 @@ public class AiPlan {
             case CAREER_ASSISTANT -> careerAssistantCredits;
             case CANDIDATE_FIT -> candidateFitCredits;
             case PROFILE_PARSE -> cvEvaluationCredits; // Same quota as CV_EVALUATION
+            case MOCK_INTERVIEW -> cvEvaluationCredits;
         };
     }
 }

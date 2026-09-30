@@ -5,6 +5,12 @@ import com.example.cvadvisorplatform.dto.AiCvEvaluationRequest;
 import com.example.cvadvisorplatform.dto.AiCvEvaluationResponse;
 import com.example.cvadvisorplatform.dto.CareerRoadmapResponse;
 import com.example.cvadvisorplatform.dto.CurrentUserUpdateRequest;
+import com.example.cvadvisorplatform.dto.AiInterviewQuestionDto;
+import com.example.cvadvisorplatform.dto.AiInterviewSessionResponse;
+import com.example.cvadvisorplatform.dto.AiInterviewUserAnswerDto;
+import com.example.cvadvisorplatform.dto.AiInterviewQuestionFeedbackDto;
+import com.example.cvadvisorplatform.dto.AiInterviewEvaluateRequest;
+import com.example.cvadvisorplatform.dto.AiInterviewEvaluationResponse;
 import com.example.cvadvisorplatform.exception.AiProviderException;
 import com.example.cvadvisorplatform.model.AiFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -475,11 +481,13 @@ public class OpenRouterService {
      * Dùng cho các tính năng cần cấu trúc JSON chặt chẽ như parse profile.
      */
     private String callOpenRouterApiJsonMode(String prompt, int maxTokens, AiFeature feature) {
+        return callOpenRouterApiJsonMode(prompt, maxTokens, feature, 0.4);
+    }
+
+    private String callOpenRouterApiJsonMode(String prompt, int maxTokens, AiFeature feature, double temp) {
         int estimatedInput = Math.max(1, (prompt.length() + 3) / 4);
         AiQuotaService.Reservation reservation = quotaService.reserve(feature, estimatedInput, maxTokens);
         List<String> fallbackModels = buildModelSequence();
-        double temp = 0.1; // Low temp for deterministic JSON
-
         RuntimeException lastError = null;
 
         for (String model : fallbackModels) {
@@ -939,6 +947,280 @@ public class OpenRouterService {
         } catch (Exception e) {
             log.error("Lỗi parse JSON thông tin hồ sơ từ AI: {}. AI Raw Response: [{}]", e.getMessage(), aiResponse, e);
             throw new RuntimeException("AI không thể trích xuất cấu trúc hồ sơ hợp lệ từ CV. Vui lòng thử lại.");
+        }
+    }
+
+    public AiInterviewSessionResponse generateInterviewQuestions(
+            String cvContent,
+            String targetRole,
+            String jobDescription,
+            String experienceLevel,
+            String interviewType,
+            int questionCount
+    ) {
+        String cvTruncated = (cvContent != null && cvContent.length() > 30000)
+                ? cvContent.substring(0, 30000)
+                : (cvContent != null ? cvContent : "");
+        String jdTruncated = (jobDescription != null && jobDescription.length() > 10000)
+                ? jobDescription.substring(0, 10000)
+                : (jobDescription != null ? jobDescription : "");
+
+        int count = (questionCount >= 3 && questionCount <= 7) ? questionCount : 5;
+        String role = (targetRole != null && !targetRole.isBlank()) ? targetRole : "Vị trí chuyên môn phù hợp với CV";
+        String level = (experienceLevel != null && !experienceLevel.isBlank()) ? experienceLevel : "Mid-Level";
+        String type = (interviewType != null && !interviewType.isBlank()) ? interviewType : "Chuyên môn kỹ thuật & Xử lý tình huống";
+
+        String prompt = """
+            Bạn là Trưởng ban phỏng vấn tuyển dụng (Hiring Manager) giàu kinh nghiệm.
+            Hãy soạn kịch bản phỏng vấn gồm CHÍNH XÁC {QUESTION_COUNT} câu hỏi phỏng vấn thực tế, chi tiết và chuyên sâu dành cho ứng viên.
+
+            [THÔNG TIN ỨNG VIÊN & VỊ TRÍ]
+            - Vị trí ứng tuyển: {TARGET_ROLE}
+            - Cấp bậc mong muốn: {EXPERIENCE_LEVEL}
+            - Loại hình phỏng vấn: {INTERVIEW_TYPE}
+            - Nội dung hồ sơ CV của ứng viên:
+            {CV_CONTENT}
+            - Mô tả công việc (JD):
+            {JD_CONTENT}
+
+            [QUY TẮC BẮT BUỘC - TUÂN THỦ NGHIÊM NGẶT]
+            1. BẮT BUỘC sinh đúng {QUESTION_COUNT} câu hỏi độc lập trong mảng "questions".
+            2. Từng câu hỏi phải là CÂU HỎI THỰC TẾ mà nhà tuyển dụng hỏi ứng viên trong phòng phỏng vấn (viết bằng tiếng Việt tự nhiên, rõ ràng, sâu sắc).
+               - Nếu là TTS / Thực tập / Junior: Tập trung vào kiến thức nền tảng vững chắc, tư duy giải quyết vấn đề, cách tự học và 1 câu hỏi tình huống làm việc nhóm (STAR).
+               - Nếu có CV: Đào sâu vào các công nghệ, framework, dự án ứng viên đã ghi trong CV.
+               - Nếu chưa có CV/JD: Tự động đưa ra các câu hỏi phỏng vấn tiêu chuẩn xuất sắc nhất của ngành nghề {TARGET_ROLE}.
+            3. TUYỆT ĐỐI KHÔNG copy lại các chuỗi placeholder như "Nội dung câu hỏi phỏng vấn chi tiết" hay "Kỹ năng cần kiểm tra". Mỗi câu hỏi phải có nội dung hoàn chỉnh và cụ thể.
+            4. Trả về DUY NHẤT một chuỗi JSON hợp lệ theo định dạng:
+            {
+              "sessionTitle": "Phỏng vấn vị trí {TARGET_ROLE}",
+              "targetRole": "{TARGET_ROLE}",
+              "experienceLevel": "{EXPERIENCE_LEVEL}",
+              "interviewType": "{INTERVIEW_TYPE}",
+              "overview": "Mô tả ngắn gọn về định hướng và tiêu chí đánh giá của buổi phỏng vấn này (1-2 câu)",
+              "questions": [
+                {
+                  "id": 1,
+                  "category": "Kiến thức chuyên môn",
+                  "question": "Câu hỏi thực tế số 1 cụ thể dành cho {TARGET_ROLE}...",
+                  "hint": "Gợi ý ứng viên nên trình bày theo bối cảnh, giải pháp và kinh nghiệm thực tế",
+                  "competencyEvaluated": "Kỹ năng cốt lõi cần đo lường"
+                }
+              ]
+            }
+            """
+            .replace("{QUESTION_COUNT}", String.valueOf(count))
+            .replace("{TARGET_ROLE}", role)
+            .replace("{EXPERIENCE_LEVEL}", level)
+            .replace("{INTERVIEW_TYPE}", type)
+            .replace("{CV_CONTENT}", cvTruncated.isBlank() ? "[Ứng viên chưa cung cấp CV, hãy tạo câu hỏi chuẩn mực theo vị trí và cấp bậc]" : cvTruncated)
+            .replace("{JD_CONTENT}", jdTruncated.isBlank() ? "[Chưa có JD cụ thể, hãy bám sát yêu cầu tiêu chuẩn của vị trí]" : jdTruncated);
+
+        String aiResponse = callOpenRouterApiJsonMode(prompt, 3000, AiFeature.MOCK_INTERVIEW, 0.4);
+        try {
+            String jsonClean = cleanAndExtractJson(aiResponse);
+            AiInterviewSessionResponse res = objectMapper.readValue(jsonClean, AiInterviewSessionResponse.class);
+
+            // Kiểm tra và bảo vệ dữ liệu: Nếu AI trả về placeholder hoặc thiếu câu hỏi
+            if (res.getQuestions() == null || res.getQuestions().isEmpty() || isPlaceholderQuestion(res.getQuestions().get(0).getQuestion())) {
+                log.warn("AI trả về câu hỏi dạng placeholder hoặc rỗng. Kích hoạt fallback questions chất lượng cao...");
+                res.setQuestions(generateFallbackQuestions(role, level, count));
+            } else {
+                for (int i = 0; i < res.getQuestions().size(); i++) {
+                    AiInterviewQuestionDto q = res.getQuestions().get(i);
+                    if (isPlaceholderQuestion(q.getQuestion())) {
+                        List<AiInterviewQuestionDto> fallbacks = generateFallbackQuestions(role, level, count);
+                        if (i < fallbacks.size()) {
+                            res.getQuestions().set(i, fallbacks.get(i));
+                        }
+                    }
+                }
+            }
+
+            return res;
+        } catch (Exception e) {
+            log.error("Lỗi parse JSON câu hỏi phỏng vấn: {}. AI Raw: {}", e.getMessage(), aiResponse, e);
+            return AiInterviewSessionResponse.builder()
+                    .sessionTitle("Phỏng vấn vị trí " + role)
+                    .targetRole(role)
+                    .experienceLevel(level)
+                    .interviewType(type)
+                    .overview("Kịch bản phỏng vấn thực chiến đánh giá kiến thức chuyên môn và phản xạ giải quyết vấn đề.")
+                    .questions(generateFallbackQuestions(role, level, count))
+                    .build();
+        }
+    }
+
+    private boolean isPlaceholderQuestion(String q) {
+        if (q == null || q.isBlank()) return true;
+        String lower = q.toLowerCase();
+        return lower.contains("nội dung câu hỏi")
+                || lower.contains("câu hỏi phỏng vấn chi tiết")
+                || lower.contains("placeholder")
+                || lower.contains("câu hỏi thực tế số");
+    }
+
+    private List<AiInterviewQuestionDto> generateFallbackQuestions(String role, String level, int count) {
+        String lowerRole = role != null ? role.toLowerCase() : "";
+        List<AiInterviewQuestionDto> list = new ArrayList<>();
+
+        if (lowerRole.contains("frontend") || lowerRole.contains("react") || lowerRole.contains("vue") || lowerRole.contains("fe")) {
+            list.add(new AiInterviewQuestionDto(1, "Kiến thức chuyên môn", "Em hãy giải thích sự khác biệt giữa state và props trong React? Khi state thay đổi thì quá trình render diễn ra như thế nào?", "Áp dụng STAR: Nêu định nghĩa ngắn gọn, giải thích cơ chế so sánh Virtual DOM và đưa ví dụ thực tế.", "Tư duy luồng dữ liệu React"));
+            list.add(new AiInterviewQuestionDto(2, "Tối ưu hóa hiệu năng", "Làm thế nào để em tối ưu tốc độ tải trang và trải nghiệm người dùng trong một ứng dụng web (Lazy loading, caching, bundle splitting)?", "Trình bày các kỹ thuật từ assets, render cycle đến network request.", "Kỹ năng tối ưu Frontend"));
+            list.add(new AiInterviewQuestionDto(3, "JavaScript nền tảng", "Em hiểu thế nào về cơ chế bất đồng bộ trong JavaScript (Event Loop, Promise, async/await)? Hãy nêu một lỗi thường gặp khi xử lý API.", "Nêu bối cảnh khi gọi API bất đồng bộ, cách bắt lỗi try/catch và cập nhật UI mượt mà.", "JavaScript Asynchronous"));
+            list.add(new AiInterviewQuestionDto(4, "Giao diện & Responsive", "Khi nhận bản thiết kế Figma phức tạp, em tổ chức component và CSS/Responsive cho nhiều kích thước màn hình như thế nào?", "Mô tả phương pháp Mobile-first, cách dùng Flexbox/Grid và tái sử dụng component.", "CSS & UI/UX Styling"));
+            list.add(new AiInterviewQuestionDto(5, "Tình huống phối hợp (STAR)", "Hãy chia sẻ về một lần em gặp khó khăn khi tích hợp API với đội Backend hoặc gặp bug khó hiểu trong dự án, em đã xử lý ra sao?", "Mô tả Bối cảnh (Situation) -> Nhiệm vụ (Task) -> Cách debug/giao tiếp (Action) -> Kết quả đạt được (Result).", "Kỹ năng xử lý vấn đề & Teamwork"));
+        } else if (lowerRole.contains("backend") || lowerRole.contains("java") || lowerRole.contains("spring") || lowerRole.contains("node")) {
+            list.add(new AiInterviewQuestionDto(1, "Kiến trúc hệ thống", "Em hãy giải thích các nguyên tắc cốt lõi của RESTful API và cách phân bổ HTTP status code (200, 201, 400, 401, 403, 500) chuẩn mực.", "Nêu rõ vai trò của từng status code và cấu trúc response thống nhất.", "Thiết kế RESTful API"));
+            list.add(new AiInterviewQuestionDto(2, "Cơ sở dữ liệu", "Trong CSDL quan hệ (MySQL/PostgreSQL), Index hoạt động như thế nào? Trường hợp nào đánh Index có thể gây phản tác dụng?", "Phân tích cấu trúc B-Tree, sự đánh đổi giữa tốc độ đọc (SELECT) và ghi (INSERT/UPDATE).", "Tối ưu hóa Database"));
+            list.add(new AiInterviewQuestionDto(3, "Bảo mật & Xác thực", "Hãy phân biệt giữa Authentication và Authorization. Em đã từng triển khai JWT hoặc Session trong dự án như thế nào?", "Giải thích flow truyền tải token, cách bảo mật private key và xử lý phân quyền role-based.", "Web Security & Auth"));
+            list.add(new AiInterviewQuestionDto(4, "Xử lý đồng thời", "Làm thế nào để hệ thống xử lý bài toán race condition hoặc khóa dữ liệu khi có nhiều người dùng đồng thời mua cùng một món hàng?", "Đề xuất giải pháp Pessimistic Lock, Optimistic Lock hoặc Message Queue.", "Concurrency & Consistency"));
+            list.add(new AiInterviewQuestionDto(5, "Xử lý sự cố (STAR)", "Hãy kể lại một lỗi nghiêm trọng (bug logic hoặc crash server) mà em từng gặp phải trong dự án và các bước em đã dùng để debug và khắc phục.", "Mô tả theo chuẩn STAR: Bối cảnh lỗi -> Nguyên nhân gốc rễ -> Giải pháp vá lỗi -> Biện pháp phòng ngừa.", "Troubleshooting & Problem Solving"));
+        } else {
+            list.add(new AiInterviewQuestionDto(1, "Năng lực chuyên môn", "Em hãy chia sẻ về thế mạnh chuyên môn lớn nhất của mình đối với vị trí " + role + " và lý do em tin mình phù hợp với công việc này?", "Nêu bật các kỹ năng cốt lõi và ví dụ dự án chứng minh kết quả.", "Độ phù hợp nghề nghiệp"));
+            list.add(new AiInterviewQuestionDto(2, "Kỹ năng giải quyết vấn đề", "Khi nhận một yêu cầu công việc mới với công nghệ hoặc phạm vi em chưa từng làm trước đây, em sẽ lên kế hoạch tiếp cận và thực thi như thế nào?", "Trình bày quy trình nghiên cứu tài liệu, chia nhỏ bài toán và xin hỗ trợ khi cần.", "Khả năng tự học & Thích nghi"));
+            list.add(new AiInterviewQuestionDto(3, "Tình huống làm việc nhóm (STAR)", "Hãy kể về một lần em gặp bất đồng quan điểm với đồng nghiệp hoặc trưởng nhóm về phương án triển khai công việc, em đã xử lý như thế nào?", "Áp dụng STAR: Nêu rõ bối cảnh, cách lắng nghe, đối thoại xây dựng và kết quả đạt được.", "Giao tiếp & Giải quyết xung đột"));
+            list.add(new AiInterviewQuestionDto(4, "Quản lý thời gian", "Làm thế nào để em ưu tiên công việc khi phải đối mặt với nhiều đầu việc có deadline gấp cùng một lúc?", "Phương pháp sắp xếp thứ tự ưu tiên (Eisenhower/Kanban) và cách quản lý kỳ vọng.", "Quản lý áp lực & Tiến độ"));
+            list.add(new AiInterviewQuestionDto(5, "Định hướng phát triển", "Mục tiêu nghề nghiệp và những kỹ năng quan trọng nhất mà em muốn trau dồi trong 1 đến 2 năm tới là gì?", "Liên hệ mục tiêu cá nhân với sự đóng góp giá trị lâu dài cho tổ chức.", "Tầm nhìn nghề nghiệp"));
+        }
+
+        while (list.size() > count) {
+            list.remove(list.size() - 1);
+        }
+        return list;
+    }
+
+    public AiInterviewEvaluationResponse evaluateInterview(
+            String targetRole,
+            String experienceLevel,
+            String cvSummary,
+            List<AiInterviewUserAnswerDto> answers
+    ) {
+        if (answers == null || answers.isEmpty()) {
+            throw new RuntimeException("Danh sách câu trả lời phỏng vấn trống");
+        }
+
+        StringBuilder qaBuilder = new StringBuilder();
+        for (int i = 0; i < answers.size(); i++) {
+            AiInterviewUserAnswerDto a = answers.get(i);
+            String rawAnswer = (a.getUserAnswer() != null && !a.getUserAnswer().isBlank()) ? a.getUserAnswer() : "[Ứng viên không trả lời hoặc bỏ qua]";
+            String cleanAnswer = rawAnswer.replaceAll("(?i)<unk>", "").replaceAll("\\s+", " ").trim();
+            if (cleanAnswer.length() > 1500) {
+                cleanAnswer = cleanAnswer.substring(0, 1500) + "... [câu trả lời dài, đã rút gọn]";
+            }
+            if (cleanAnswer.isEmpty()) {
+                cleanAnswer = "[Ứng viên không trả lời hoặc bỏ qua]";
+            }
+
+            qaBuilder.append("--- CÂU HỎI ").append(i + 1).append(" ---\n");
+            qaBuilder.append("Thể loại: ").append(a.getCategory() != null ? a.getCategory() : "Chuyên môn").append("\n");
+            qaBuilder.append("Câu hỏi: ").append(a.getQuestion() != null ? a.getQuestion() : "").append("\n");
+            qaBuilder.append("Câu trả lời của ứng viên:\n");
+            qaBuilder.append(cleanAnswer).append("\n\n");
+        }
+
+        String role = (targetRole != null && !targetRole.isBlank()) ? targetRole : "Vị trí ứng tuyển";
+        String level = (experienceLevel != null && !experienceLevel.isBlank()) ? experienceLevel : "Mid-Level";
+
+        String prompt = """
+            Bạn là Trưởng ban tuyển dụng cao cấp đánh giá kết quả buổi phỏng vấn của ứng viên.
+            Hãy chấm điểm chi tiết và đưa ra nhận xét chuẩn xác, mang tính xây dựng theo phương pháp STAR.
+
+            [THÔNG TIN BUỔI PHỎNG VẤN]
+            - Vị trí ứng tuyển: {TARGET_ROLE}
+            - Cấp bậc: {EXPERIENCE_LEVEL}
+            - Danh sách câu hỏi và câu trả lời của ứng viên:
+            {QA_CONTENT}
+
+            [YÊU CẦU ĐÁNH GIÁ]
+            1. Chấm điểm tổng quan từ 0 đến 100 (overallScore).
+            2. Xếp loại ứng viên (rating): "Xuất sắc (90-100)", "Rất tốt (80-89)", "Đạt yêu cầu (70-79)", "Cần cải thiện (50-69)", "Chưa đạt (<50)".
+            3. Phân tích STAR (starAnalysis):
+               - situation: Đánh giá cách ứng viên nêu bối cảnh (kèm % hoàn thiện, VD: "85% - Bối cảnh rõ ràng...")
+               - task: Đánh giá cách nêu nhiệm vụ (kèm %, VD: "80% - Nhiệm vụ xác định tốt...")
+               - action: Đánh giá hành động thực tế và kiến thức (kèm %, VD: "88% - Hành động logic...")
+               - result: Đánh giá kết quả và số liệu định lượng (kèm %, VD: "75% - Kết quả có định lượng...")
+            4. Chỉ ra 2-3 Điểm mạnh (strengths) và 2-3 Điểm cần khắc phục (improvements).
+            5. Với TỪNG CÂU HỎI (questionFeedbacks):
+               - questionId: Số thứ tự câu hỏi (1, 2, 3...)
+               - question: Trích lại câu hỏi
+               - userAnswer: Câu trả lời của ứng viên
+               - score: Chấm điểm thang 0 - 100 (BẮT BUỘC là số nguyên, không để null)
+               - comment: Nhận xét ngắn gọn, phân tích ưu nhược điểm (BẮT BUỘC không để trống)
+               - modelAnswer: Câu trả lời mẫu điểm 10 lý tưởng đầy đủ theo STAR để ứng viên học hỏi (BẮT BUỘC không để trống)
+
+            Trả về DUY NHẤT một chuỗi JSON hợp lệ theo format:
+            {
+              "overallScore": 85,
+              "rating": "Rất tốt (80-89)",
+              "summaryFeedback": "Nhận xét tổng quan khoảng 2-3 câu bằng tiếng Việt",
+              "starAnalysis": {
+                "situation": "85% - Bối cảnh rõ ràng...",
+                "task": "80% - Nhiệm vụ xác định tốt...",
+                "action": "88% - Hành động logic...",
+                "result": "75% - Kết quả có định lượng..."
+              },
+              "strengths": ["Điểm mạnh 1", "Điểm mạnh 2"],
+              "improvements": ["Điểm cần khắc phục 1", "Điểm cần khắc phục 2"],
+              "questionFeedbacks": [
+                {
+                  "questionId": 1,
+                  "question": "Nội dung câu hỏi",
+                  "userAnswer": "Câu trả lời của ứng viên",
+                  "score": 85,
+                  "comment": "Nhận xét câu này",
+                  "modelAnswer": "Câu trả lời mẫu điểm 10"
+                }
+              ]
+            }
+            """
+            .replace("{TARGET_ROLE}", role)
+            .replace("{EXPERIENCE_LEVEL}", level)
+            .replace("{QA_CONTENT}", qaBuilder.toString());
+
+        String aiResponse = callOpenRouterApiJsonMode(prompt, 4000, AiFeature.MOCK_INTERVIEW);
+        try {
+            String jsonClean = cleanAndExtractJson(aiResponse);
+            AiInterviewEvaluationResponse res = objectMapper.readValue(jsonClean, AiInterviewEvaluationResponse.class);
+
+            // Đảm bảo không có trường nào bị null gây lỗi UI
+            if (res.getQuestionFeedbacks() != null) {
+                int totalQScore = 0;
+                int validCount = 0;
+                for (int i = 0; i < res.getQuestionFeedbacks().size(); i++) {
+                    AiInterviewQuestionFeedbackDto fb = res.getQuestionFeedbacks().get(i);
+                    if (fb.getScore() == null) {
+                        fb.setScore(70);
+                    }
+                    totalQScore += fb.getScore();
+                    validCount++;
+
+                    if (fb.getComment() == null || fb.getComment().isBlank()) {
+                        fb.setComment("Ứng viên đã trả lời câu hỏi. Cần bổ sung ví dụ thực tế và giải pháp chi tiết hơn để nâng cao điểm số.");
+                    }
+                    if (fb.getModelAnswer() == null || fb.getModelAnswer().isBlank()) {
+                        fb.setModelAnswer("Áp dụng mô hình STAR: Nêu rõ bối cảnh cụ thể (Situation), phân tích nhiệm vụ cốt lõi (Task), giải trình chi tiết các bước xử lý kỹ thuật thực thi (Action), và đưa ra số liệu định lượng về kết quả đạt được (Result).");
+                    }
+                }
+
+                if (res.getOverallScore() == null && validCount > 0) {
+                    res.setOverallScore(Math.round((float) totalQScore / validCount));
+                }
+            }
+
+            if (res.getOverallScore() == null) {
+                res.setOverallScore(75);
+            }
+            if (res.getRating() == null || res.getRating().isBlank()) {
+                res.setRating(res.getOverallScore() >= 80 ? "Rất tốt (80-89)" : "Đạt yêu cầu (70-79)");
+            }
+            if (res.getSummaryFeedback() == null || res.getSummaryFeedback().isBlank()) {
+                res.setSummaryFeedback("Buổi phỏng vấn thể hiện tinh thần chủ động và kiến thức nền tảng tốt. Hãy tiếp tục trau dồi các câu trả lời định lượng để gia tăng sức thuyết phục với nhà tuyển dụng.");
+            }
+
+            return res;
+        } catch (Exception e) {
+            log.error("Lỗi parse JSON kết quả đánh giá phỏng vấn: {}. AI Raw: {}", e.getMessage(), aiResponse, e);
+            throw new RuntimeException("AI không thể tạo báo cáo đánh giá phỏng vấn. Vui lòng thử lại.");
         }
     }
 

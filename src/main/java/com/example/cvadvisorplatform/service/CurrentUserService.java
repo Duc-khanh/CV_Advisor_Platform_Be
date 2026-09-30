@@ -17,6 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+import com.example.cvadvisorplatform.dto.ChangePasswordRequest;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -25,6 +28,33 @@ public class CurrentUserService {
     private final CloudinaryService cloudinaryService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    public void changePassword(ChangePasswordRequest request) {
+        if (request == null || request.getCurrentPassword() == null || request.getNewPassword() == null) {
+            throw new RuntimeException("Vui lòng điền đầy đủ mật khẩu hiện tại và mật khẩu mới");
+        }
+
+        if (request.getNewPassword().length() < 6) {
+            throw new RuntimeException("Mật khẩu mới phải có tối thiểu 6 ký tự");
+        }
+
+        if (request.getConfirmPassword() != null && !request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new RuntimeException("Xác nhận mật khẩu mới không trùng khớp");
+        }
+
+        User user = getAuthenticatedUser();
+        User freshUser = userRepository.findById(user.getUserId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), freshUser.getPassword())) {
+            throw new RuntimeException("Mật khẩu hiện tại không chính xác");
+        }
+
+        freshUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(freshUser);
+        log.info("Người dùng ID {} đổi mật khẩu thành công.", freshUser.getUserId());
+    }
 
     public CurrentUserResponse getCurrentUser() {
         User user = getAuthenticatedUser();

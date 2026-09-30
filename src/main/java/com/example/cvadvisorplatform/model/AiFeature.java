@@ -6,5 +6,6 @@ public enum AiFeature {
     CV_REWRITE,
     CAREER_ASSISTANT,
     CANDIDATE_FIT,
-    PROFILE_PARSE
+    PROFILE_PARSE,
+    MOCK_INTERVIEW
 }
