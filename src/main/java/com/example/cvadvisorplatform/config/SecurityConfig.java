@@ -33,12 +33,15 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/payments/**").permitAll()
 
-                        .requestMatchers("/api/v1/ai/**").permitAll()
+                        .requestMatchers("/api/v1/ai/**").hasRole("USER")
 
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/uploads/cv/**", "/api/uploads/cv/**").denyAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/api/uploads/**").permitAll()
+                        .requestMatchers("/error").permitAll()
 
                         .requestMatchers("/api/user/**").hasRole("USER")
                         .requestMatchers("/api/hr/**").hasRole("HR")

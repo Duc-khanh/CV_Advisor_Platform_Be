@@ -9,5 +9,9 @@ public class AdminUserResponse {
     private String email;
     private String role;
     private String avatar;
+    private String avatarUrl;
     private boolean enabled;
+    private String hrApprovalStatus;
+    private String companyName;
+    private Long companyId;
 }

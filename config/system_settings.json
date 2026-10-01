@@ -1,0 +1,71 @@
+{
+  "ai" : {
+    "strategy" : "free_first",
+    "primaryFreeModel" : "openrouter/free",
+    "fallbackModel" : "google/gemini-2.5-flash-lite",
+    "temperature" : 0.4,
+    "topP" : 0.9,
+    "maxTokens" : 4096,
+    "safetyLevel" : "BLOCK_LOW",
+    "autoFallbackOnQuota" : true,
+    "availableFreeModels" : [ {
+      "name" : "OpenRouter Free Router (Tự động chọn mô hình miễn phí khả dụng)",
+      "provider" : "OpenRouter",
+      "id" : "openrouter/free"
+    }, {
+      "name" : "Google Gemma 4 31B (Miễn phí - Thông minh)",
+      "provider" : "Google / OpenRouter",
+      "id" : "google/gemma-4-31b-it:free"
+    }, {
+      "name" : "Liquid LFM 2.5 (Miễn phí - Siêu tốc)",
+      "provider" : "LiquidAI / OpenRouter",
+      "id" : "liquid/lfm-2.5-2.6b:free"
+    }, {
+      "name" : "Google Gemini 2.5 Flash Lite (Siêu nhanh, khuyên dùng)",
+      "provider" : "Google / OpenRouter",
+      "id" : "google/gemini-2.5-flash-lite"
+    }, {
+      "name" : "Google Gemini 2.5 Flash (Chính xác cao, chuyên sâu)",
+      "provider" : "Google / OpenRouter",
+      "id" : "google/gemini-2.5-flash"
+    }, {
+      "name" : "Meta LLaMA 3.1 8B (Tiết kiệm, ổn định)",
+      "provider" : "Meta / OpenRouter",
+      "id" : "meta-llama/llama-3.1-8b-instruct"
+    }, {
+      "name" : "Meta LLaMA 3.3 70B (Mạnh mẽ, toàn diện)",
+      "provider" : "Meta / OpenRouter",
+      "id" : "meta-llama/llama-3.3-70b-instruct"
+    } ]
+  },
+  "storage" : {
+    "maxCvFileSizeMb" : 10,
+    "maxAvatarFileSizeMb" : 3,
+    "allowedExtensions" : [ ".pdf", ".docx", ".doc" ],
+    "storagePath" : "uploads/cv",
+    "autoCleanupDays" : 90
+  },
+  "security" : {
+    "jwtExpirationHours" : 24,
+    "passwordMinLength" : 8,
+    "requireSpecialChar" : false,
+    "maxLoginAttempts" : 5,
+    "lockoutDurationMinutes" : 15
+  },
+  "email" : {
+    "smtpHost" : "smtp.gmail.com",
+    "smtpPort" : 587,
+    "senderName" : "CV Advisor Platform",
+    "senderEmail" : "no-reply@cvadvisor.vn",
+    "notifyCandidateOnApply" : true,
+    "notifyHrOnNewCandidate" : true,
+    "notifyOnAccountAction" : true
+  },
+  "general" : {
+    "platformName" : "CV Advisor Platform",
+    "supportEmail" : "support@cvadvisor.vn",
+    "hotline" : "1900 6868",
+    "maintenanceMode" : true,
+    "maintenanceMessage" : "Hệ thống đang tiến hành nâng cấp hạ tầng định kỳ. Xin quý khách vui lòng quay lại sau ít phút!"
+  }
+}

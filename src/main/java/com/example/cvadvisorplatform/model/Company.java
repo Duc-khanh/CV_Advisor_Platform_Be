@@ -24,6 +24,15 @@ public class Company {
     @Lob
     private String description;
 
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    @Column(name = "website_url")
+    private String websiteUrl;
+
+    private String email;
+    private String phone;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 }
 

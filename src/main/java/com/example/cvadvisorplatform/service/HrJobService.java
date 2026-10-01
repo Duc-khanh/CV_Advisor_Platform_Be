@@ -192,6 +192,11 @@ public class HrJobService {
         dto.setCreatedAt(job.getCreatedAt());
         dto.setCandidateRequirements(job.getCandidateRequirements());
         dto.setImageUrl(job.getImageUrl());
+        if (job.getCompany() != null && job.getCompany().getLogoUrl() != null && !job.getCompany().getLogoUrl().isBlank()) {
+            dto.setCompanyLogo(job.getCompany().getLogoUrl());
+        } else {
+            dto.setCompanyLogo(job.getImageUrl());
+        }
 
 
         return dto;

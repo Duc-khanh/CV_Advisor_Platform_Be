@@ -28,4 +28,7 @@ public class AppliedCandidateResponse {
 
     private String fullName;
     private String email;
+
+    // AI Fit evaluation (Được lưu vĩnh viễn trong DB)
+    private AiCandidateFitResponse aiFit;
 }

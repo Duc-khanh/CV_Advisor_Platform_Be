@@ -31,27 +31,33 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        // ===== BYPASS PUBLIC API =====
-        if (
+        // ===== XÁC ĐỊNH ROUTE PUBLIC (không bắt buộc token) =====
+        boolean isPublicRoute =
                 path.startsWith("/api/auth/")
-                        || path.startsWith("/api/v1/ai/")
                         || path.startsWith("/api/public/")
                         || path.startsWith("/uploads/")
-        ) {
-
-            filterChain.doFilter(request, response);
-            return;
-        }
+                        || path.startsWith("/api/uploads/");
 
         String authHeader = request.getHeader("Authorization");
+        String token = null;
 
-        // Không có token -> cho đi tiếp
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+        } else if (request.getParameter("token") != null && !request.getParameter("token").isBlank()) {
+            token = request.getParameter("token");
+        }
+
+        // Với route public không có token -> cho đi tiếp luôn
+        if (isPublicRoute && token == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7);
+        // Với route không public và không có token -> cho đi tiếp (Spring Security sẽ chặn sau)
+        if (!isPublicRoute && token == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
 

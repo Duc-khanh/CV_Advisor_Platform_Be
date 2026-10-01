@@ -21,8 +21,14 @@ public class CV {
     private String fileName;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String cvText;
+
+    private String storedFileName;
+
+    private Long fileSize;
+
+    private String mimeType;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }

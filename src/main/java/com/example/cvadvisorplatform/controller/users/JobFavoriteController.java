@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/user/jobs/favorite")
 @RequiredArgsConstructor
@@ -14,19 +16,58 @@ public class JobFavoriteController {
 
     private final JobFavoriteService service;
 
-    @PostMapping("/{jobId}")
-    public ResponseEntity<Void> toggleFavorite(
+    /**
+     * Thêm công việc vào danh sách yêu thích.
+     * Trả về 409 Conflict nếu công việc đã có trong danh sách yêu thích.
+     */
+    @PostMapping("/add/{jobId}")
+    public ResponseEntity<?> addFavorite(
             @PathVariable Long jobId,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         if (principal == null) {
-            return ResponseEntity.status(401).build();
+            return ResponseEntity.status(401).body(Map.of("message", "Chưa xác thực người dùng"));
         }
 
-        service.toggleFavorite(principal.getUser().getUserId(), jobId);
-        return ResponseEntity.ok().build();
+        try {
+            service.addFavorite(principal.getUser().getUserId(), jobId);
+            return ResponseEntity.ok(Map.of("message", "Đã thêm vào danh sách yêu thích"));
+        } catch (RuntimeException e) {
+            if ("ALREADY_FAVORITED".equals(e.getMessage())) {
+                return ResponseEntity.status(409)
+                        .body(Map.of("message", "Công việc đã có trong danh sách việc làm yêu thích"));
+            }
+            return ResponseEntity.status(500).body(Map.of("message", "Lỗi hệ thống"));
+        }
     }
 
+    /**
+     * Xóa công việc khỏi danh sách yêu thích.
+     */
+    @DeleteMapping("/{jobId}")
+    public ResponseEntity<?> removeFavorite(
+            @PathVariable Long jobId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Chưa xác thực người dùng"));
+        }
+
+        try {
+            service.removeFavorite(principal.getUser().getUserId(), jobId);
+            return ResponseEntity.ok(Map.of("message", "Đã bỏ khỏi danh sách yêu thích"));
+        } catch (RuntimeException e) {
+            if ("NOT_FAVORITED".equals(e.getMessage())) {
+                return ResponseEntity.status(404)
+                        .body(Map.of("message", "Công việc không có trong danh sách yêu thích"));
+            }
+            return ResponseEntity.status(500).body(Map.of("message", "Lỗi hệ thống"));
+        }
+    }
+
+    /**
+     * Kiểm tra trạng thái yêu thích của một công việc.
+     */
     @GetMapping("/{jobId}/status")
     public ResponseEntity<Boolean> checkFavoriteStatus(
             @PathVariable Long jobId,
@@ -41,6 +82,9 @@ public class JobFavoriteController {
         );
     }
 
+    /**
+     * Lấy toàn bộ danh sách công việc yêu thích của user hiện tại.
+     */
     @GetMapping("/all")
     public ResponseEntity<?> getAllFavorites(
             @AuthenticationPrincipal UserPrincipal principal
@@ -54,4 +98,3 @@ public class JobFavoriteController {
         );
     }
 }
-

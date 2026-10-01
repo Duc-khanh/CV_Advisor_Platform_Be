@@ -20,6 +20,7 @@ import org.springframework.http.*;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -33,9 +34,9 @@ public class AuthService {
 
 
     public void register(RegisterRequest request) {
-
+        request.setEmail(normalizeEmail(request.getEmail()));
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new RuntimeException("Email này đã được sử dụng. Vui lòng chọn email khác.");
         }
 
         Role role = roleRepository.findByRoleName("USER")
@@ -51,17 +52,22 @@ public class AuthService {
     }
 
     public void registerHr(RegisterHrRequest request) {
+        request.setEmail(normalizeEmail(request.getEmail()));
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new RuntimeException("Email này đã được sử dụng. Vui lòng chọn email khác.");
         }
 
         Role role = roleRepository.findByRoleName("HR")
                 .orElseThrow(() -> new RuntimeException("Role HR not found"));
 
-        Industry industry = industryRepository.findByIndustryName(request.getIndustryName())
+        String indName = (request.getIndustryName() != null && !request.getIndustryName().isBlank())
+                ? request.getIndustryName().trim()
+                : "Công nghệ thông tin";
+
+        Industry industry = industryRepository.findByIndustryName(indName)
                 .orElseGet(() -> {
                     Industry newIndustry = new Industry();
-                    newIndustry.setIndustryName(request.getIndustryName());
+                    newIndustry.setIndustryName(indName);
                     return industryRepository.save(newIndustry);
                 });
 
@@ -78,19 +84,26 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
         user.setCompany(company);
+        user.setEnabled(false);
+        user.setHrApprovalStatus("PENDING");
 
         userRepository.save(user);
     }
 
     public String login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(normalizeEmail(request.getEmail()))
                 .orElseThrow(() -> new RuntimeException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+            throw new RuntimeException("Email hoặc mật khẩu không chính xác.");
         }
 
         if (!user.isEnabled()) {
+            if ("PENDING".equals(user.getHrApprovalStatus())) {
+                throw new RuntimeException("Tài khoản nhà tuyển dụng của bạn đang chờ Admin phê duyệt.");
+            } else if ("REJECTED".equals(user.getHrApprovalStatus())) {
+                throw new RuntimeException("Yêu cầu đăng ký nhà tuyển dụng của bạn đã bị từ chối.");
+            }
             throw new RuntimeException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin.");
         }
 
@@ -125,10 +138,13 @@ public class AuthService {
         Map<String, Object> userInfo = response.getBody();
         String email = (String) userInfo.get("email");
         String name  = (String) userInfo.get("name");
+        boolean verified = Boolean.TRUE.equals(userInfo.get("email_verified"));
 
         if (email == null || email.isBlank()) {
             throw new RuntimeException("Google account does not have an email");
         }
+        if (!verified) throw new RuntimeException("Google email is not verified");
+        email = normalizeEmail(email);
 
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
@@ -146,6 +162,10 @@ public class AuthService {
         }
 
         return jwtService.generateToken(user);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 }
 

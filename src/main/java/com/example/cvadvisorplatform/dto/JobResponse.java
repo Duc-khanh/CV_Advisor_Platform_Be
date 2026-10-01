@@ -29,6 +29,7 @@ public class JobResponse {
     private Integer viewCount;
     private String candidateRequirements;
     private String imageUrl;
+    private String companyLogo;
 
 
 
