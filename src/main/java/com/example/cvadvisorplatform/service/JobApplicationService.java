@@ -37,7 +37,7 @@ import java.util.List;
 @Slf4j
 public class JobApplicationService {
 
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     private static final List<String> ALLOWED_TYPES = List.of(
             "application/pdf",
@@ -168,7 +168,7 @@ public class JobApplicationService {
             throw new RuntimeException("File CV không được để trống");
         }
         if (fileSize > MAX_FILE_SIZE) {
-            throw new RuntimeException("File CV vượt quá 5MB");
+            throw new RuntimeException("File CV vượt quá 10MB");
         }
         if (!ALLOWED_TYPES.contains(contentType)) {
             throw new RuntimeException("Chỉ cho phép file PDF / DOC / DOCX");

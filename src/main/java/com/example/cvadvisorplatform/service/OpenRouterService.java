@@ -46,6 +46,9 @@ public class OpenRouterService {
     @Value("${openrouter.api.model:google/gemini-3.1-flash-lite}")
     private String apiModel;
 
+    @Value("${app.public-url:http://localhost:8080}")
+    private String publicUrl;
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final AiQuotaService quotaService;
@@ -672,7 +675,7 @@ public class OpenRouterService {
 
             headers.set(
                     "HTTP-Referer",
-                    "http://localhost:8080"
+                    publicUrl
             );
 
             headers.set(

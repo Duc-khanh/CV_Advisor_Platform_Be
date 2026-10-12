@@ -5,7 +5,9 @@ import com.example.cvadvisorplatform.model.Job;
 import com.example.cvadvisorplatform.model.JobApplication;
 import com.example.cvadvisorplatform.model.User;
 import com.example.cvadvisorplatform.repository.JobApplicationRepository;
+import com.example.cvadvisorplatform.repository.JobApplicationEvaluationRepository;
 import com.example.cvadvisorplatform.repository.JobRepository;
+import com.example.cvadvisorplatform.repository.InterviewRepository;
 import com.example.cvadvisorplatform.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,9 @@ class JobApplicationServiceTest {
         fileStorageService = mock(FileStorageService.class);
         userCvService = mock(UserCvService.class);
         fileValidationService = mock(FileValidationService.class);
+        JobApplicationEvaluationRepository evaluationRepository = mock(JobApplicationEvaluationRepository.class);
+        JobApplicationEvaluationService evaluationService = mock(JobApplicationEvaluationService.class);
+        InterviewRepository interviewRepository = mock(InterviewRepository.class);
         service = new JobApplicationService(
                 applicationRepository,
                 jobRepository,
@@ -46,7 +51,10 @@ class JobApplicationServiceTest {
                 mailService,
                 fileStorageService,
                 userCvService,
-                fileValidationService
+                fileValidationService,
+                evaluationRepository,
+                evaluationService,
+                interviewRepository
         );
 
         Company company = new Company();
@@ -59,6 +67,8 @@ class JobApplicationServiceTest {
         user.setFullName("Candidate");
 
         when(applicationRepository.existsByUser_UserIdAndJob_JobId(1L, 2L)).thenReturn(false);
+        when(applicationRepository.save(any(JobApplication.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         when(jobRepository.findById(2L)).thenReturn(Optional.of(job));
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     }

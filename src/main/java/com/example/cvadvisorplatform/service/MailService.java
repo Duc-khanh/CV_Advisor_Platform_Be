@@ -273,5 +273,67 @@ public class MailService {
             log.error("Lỗi gửi email thông báo trạng thái ứng tuyển đến {}: {}", toEmail, e.getMessage());
         }
     }
+
+    /**
+     * Gửi email xác nhận thanh toán nâng cấp gói AI thành công.
+     */
+    @Async
+    public void sendPaymentSuccessConfirmation(
+            String toEmail,
+            String fullName,
+            String orderCode,
+            String planName,
+            java.math.BigDecimal amount,
+            Integer monthlyCredits
+    ) {
+        if (toEmail == null || toEmail.isBlank()) return;
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message,
+                    MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
+                    StandardCharsets.UTF_8.name());
+
+            java.text.NumberFormat currencyFormatter = java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN"));
+            String amountStr = (amount != null ? currencyFormatter.format(amount) : "0") + " VNĐ";
+            String creditsStr = (monthlyCredits != null ? monthlyCredits.toString() : "Không giới hạn") + " Credits/tháng";
+            String nameStr = (fullName != null && !fullName.isBlank()) ? fullName : "Quý khách";
+
+            String htmlContent =
+                    "<div style=\"font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 620px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);\">" +
+                    "  <div style=\"background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; padding: 26px 24px; text-align: center;\">" +
+                    "    <h1 style=\"margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 0.5px;\">🎉 XÁC NHẬN THANH TOÁN THÀNH CÔNG</h1>" +
+                    "    <p style=\"margin: 6px 0 0; font-size: 15px; opacity: 0.95; font-weight: 600;\">Nâng cấp gói AI Platform</p>" +
+                    "  </div>" +
+                    "  <div style=\"padding: 28px 24px;\">" +
+                    "    <p style=\"font-size: 15px; margin-top: 0;\">Chào <strong>" + nameStr + "</strong>,</p>" +
+                    "    <p style=\"font-size: 14.5px; color: #334155;\">Hệ thống đã nhận được thanh toán và kích hoạt thành công gói dịch vụ <strong>" + planName + "</strong> cho tài khoản của bạn.</p>" +
+                    "    <div style=\"background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px 20px; margin: 20px 0;\">" +
+                    "      <p style=\"margin: 0 0 12px; font-size: 15px; color: #4f46e5; font-weight: 700;\">📄 Chi tiết hóa đơn giao dịch</p>" +
+                    "      <table style=\"width: 100%; border-collapse: collapse; font-size: 14px;\">" +
+                    "        <tr><td style=\"padding: 6px 0; color: #64748b; width: 150px;\">Mã đơn hàng:</td><td style=\"font-weight: 700; color: #0f172a;\">#" + orderCode + "</td></tr>" +
+                    "        <tr><td style=\"padding: 6px 0; color: #64748b;\">Gói dịch vụ:</td><td style=\"font-weight: 600; color: #4f46e5;\">" + planName + "</td></tr>" +
+                    "        <tr><td style=\"padding: 6px 0; color: #64748b;\">Số tiền thanh toán:</td><td style=\"font-weight: 700; color: #059669;\">" + amountStr + "</td></tr>" +
+                    "        <tr><td style=\"padding: 6px 0; color: #64748b;\">Quyền lợi AI:</td><td style=\"font-weight: 600; color: #334155;\">" + creditsStr + "</td></tr>" +
+                    "        <tr><td style=\"padding: 6px 0; color: #64748b;\">Trạng thái:</td><td style=\"font-weight: 700; color: #059669;\">ĐÃ KÍCH HOẠT (ACTIVE)</td></tr>" +
+                    "      </table>" +
+                    "    </div>" +
+                    "    <p style=\"font-size: 14.5px; color: #334155;\">Bây giờ bạn đã có thể tận hưởng trọn vẹn các tính năng AI nâng cao (Tối ưu hóa CV không giới hạn, Mentor Lộ trình nghề nghiệp, Luyện phỏng vấn Mock Interview chuẩn STAR).</p>" +
+                    "    <p style=\"margin-top: 24px; font-size: 14.5px;\">Trân trọng,<br><strong style=\"color: #0f172a;\">Đội ngũ CvAdvisor Platform</strong></p>" +
+                    "  </div>" +
+                    "  <div style=\"background: #f8fafc; color: #94a3b8; padding: 14px 20px; text-align: center; font-size: 12px; border-top: 1px solid #f1f5f9;\">" +
+                    "    <p style=\"margin: 0;\">© 2026 CvAdvisor Platform. Mọi thắc mắc xin vui lòng liên hệ bộ phận hỗ trợ.</p>" +
+                    "  </div>" +
+                    "</div>";
+
+            helper.setTo(toEmail);
+            helper.setSubject("Xác nhận thanh toán nâng cấp gói AI thành công - " + planName);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            log.info("Email xác nhận thanh toán đơn hàng #{} đã gửi đến: {}", orderCode, toEmail);
+        } catch (Exception e) {
+            log.error("Lỗi gửi email xác nhận thanh toán đơn hàng #{}: {}", orderCode, e.getMessage());
+        }
+    }
 }
 
