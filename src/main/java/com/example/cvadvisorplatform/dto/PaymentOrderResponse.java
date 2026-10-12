@@ -17,5 +17,6 @@ public record PaymentOrderResponse(
         String qrUrl,
         String status,
         LocalDateTime createdAt,
-        LocalDateTime completedAt
+        LocalDateTime completedAt,
+        LocalDateTime expiresAt
 ) {}

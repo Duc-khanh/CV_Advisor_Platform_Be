@@ -13,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/public/jobs")
 @RequiredArgsConstructor
 public class PublicJobController {

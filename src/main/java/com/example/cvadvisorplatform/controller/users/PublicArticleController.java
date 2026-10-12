@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/public/articles")
 @RequiredArgsConstructor
 public class PublicArticleController {

@@ -35,6 +35,7 @@ public class PaymentOrder {
 
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime completedAt;
+    private LocalDateTime expiresAt;
 
     private String transactionRef;
 }

@@ -6,7 +6,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FileValidationServiceTest {
-    private final FileValidationService service = new FileValidationService();
+    private final FileValidationService service = new FileValidationService(null);
 
     @Test
     void acceptsRealPdfSignature() {

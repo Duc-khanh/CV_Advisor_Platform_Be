@@ -65,7 +65,7 @@
     "platformName" : "CV Advisor Platform",
     "supportEmail" : "support@cvadvisor.vn",
     "hotline" : "1900 6868",
-    "maintenanceMode" : true,
+    "maintenanceMode" : false,
     "maintenanceMessage" : "Hệ thống đang tiến hành nâng cấp hạ tầng định kỳ. Xin quý khách vui lòng quay lại sau ít phút!"
   }
 }

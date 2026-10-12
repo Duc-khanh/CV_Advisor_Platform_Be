@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -21,6 +22,9 @@ public class SystemSettingService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String SETTINGS_FILE_PATH = "config/system_settings.json";
 
+    @Value("${app.settings-file:" + SETTINGS_FILE_PATH + "}")
+    private String settingsFilePath;
+
     private Map<String, Object> cachedSettings = null;
 
     public synchronized Map<String, Object> getSettings() {
@@ -28,13 +32,13 @@ public class SystemSettingService {
             return new HashMap<>(cachedSettings);
         }
 
-        File file = new File(SETTINGS_FILE_PATH);
+        File file = new File(settingsFilePath);
         if (file.exists()) {
             try {
                 cachedSettings = objectMapper.readValue(file, new TypeReference<Map<String, Object>>() {});
                 return new HashMap<>(cachedSettings);
             } catch (IOException e) {
-                log.warn("Không thể đọc file config {}, khởi tạo cấu hình mặc định: {}", SETTINGS_FILE_PATH, e.getMessage());
+                log.warn("Không thể đọc file config {}, khởi tạo cấu hình mặc định: {}", settingsFilePath, e.getMessage());
             }
         }
 
@@ -49,12 +53,12 @@ public class SystemSettingService {
             current.putAll(newSettings);
             cachedSettings = current;
 
-            Path path = Paths.get(SETTINGS_FILE_PATH);
+            Path path = Paths.get(settingsFilePath);
             if (path.getParent() != null) {
                 Files.createDirectories(path.getParent());
             }
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), cachedSettings);
-            log.info("Đã lưu cấu hình hệ thống thành công vào {}", SETTINGS_FILE_PATH);
+            log.info("Đã lưu cấu hình hệ thống thành công vào {}", settingsFilePath);
         } catch (IOException e) {
             log.error("Lỗi khi ghi file cấu hình hệ thống: {}", e.getMessage());
         }
@@ -176,8 +180,8 @@ public class SystemSettingService {
         Map<String, Object> payment = new LinkedHashMap<>();
         payment.put("bankId", "MB");
         payment.put("bankName", "Ngân hàng TMCP Quân Đội (MB Bank)");
-        payment.put("accountNo", "686825062005");
-        payment.put("accountName", "NGUYEN DUC KHANH");
+        payment.put("accountNo", "");
+        payment.put("accountName", "");
         defaults.put("payment", payment);
 
         return defaults;
